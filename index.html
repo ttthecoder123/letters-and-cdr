@@ -46,6 +46,633 @@
             document.getElementById('addClientForm').reset();
         }
         
+        // Load CDR client info
+        function loadCDRClientInfo() {
+            const clientId = parseInt(document.getElementById('cdrClientSelect').value);
+            
+            if (!clientId) {
+                // Clear fields for manual entry
+                document.getElementById('cdrClientName').value = '';
+                document.getElementById('cdrFileNumber').value = '';
+                document.getElementById('cdrCourt').value = '';
+                document.getElementById('cdrOutcomeCourt').value = '';
+                return;
+            }
+            
+            const client = clients.find(c => c.id === clientId);
+            if (!client) return;
+            
+            // Populate CDR fields
+            document.getElementById('cdrClientName').value = client.name;
+            document.getElementById('cdrFileNumber').value = client.matterNumber;
+            document.getElementById('cdrCourt').value = client.court;
+            document.getElementById('cdrOutcomeCourt').value = client.court;
+            
+            // If client has next court date, populate that too
+            if (client.nextCourt) {
+                document.getElementById('cdrCourtDate').value = client.nextCourt;
+            }
+        }
+        
+        // Generate CDR
+        function generateCDR() {
+            const cdrData = {
+                outcomeCourt: document.getElementById('cdrOutcomeCourt').value,
+                outcomeDate: document.getElementById('cdrOutcomeDate').value,
+                startTime: document.getElementById('cdrStartTime').value,
+                finishTime: document.getElementById('cdrFinishTime').value,
+                courtDate: document.getElementById('cdrCourtDate').value,
+                solicitor: document.getElementById('cdrSolicitor').value,
+                clientName: document.getElementById('cdrClientName').value,
+                fileNumber: document.getElementById('cdrFileNumber').value,
+                reason: document.getElementById('cdrReason').value,
+                court: document.getElementById('cdrCourt').value,
+                courtTime: document.getElementById('cdrCourtTime').value,
+                allocateTo: getAllocatedTo(),
+                clientExcused: document.getElementById('cdrClientExcused').checked,
+                feeReminder: document.getElementById('cdrFeeReminder').value
+            };
+            
+            currentCDRData = cdrData;
+            
+            let cdrText = formatCDRText(cdrData);
+            
+            const outputDiv = document.getElementById('cdrOutput');
+            outputDiv.textContent = cdrText;
+            outputDiv.style.display = 'block';
+        }
+        
+        // Format CDR text
+        function formatCDRText(cdrData) {
+            let text = "** ** ** ** **COURT OUTCOME** ** ** **\n";
+            text += `COURT: ${cdrData.outcomeCourt}\n`;
+            text += `DATE: ${formatDate(cdrData.outcomeDate)}\n`;
+            text += `CORAM: \n`;
+            text += `CROWN: \n`;
+            text += `START: ${cdrData.startTime}\n`;
+            text += `FINISH: ${cdrData.finishTime}\n\n`;
+            
+            text += "**COURT DIARY REQUEST**\n";
+            text += `COURT DATE: ${formatDate(cdrData.courtDate)}\n`;
+            text += `SOLICITOR: ${cdrData.solicitor}\n`;
+            text += `CLIENT: ${cdrData.clientName}\n`;
+            text += `FILE NUMBER: ${cdrData.fileNumber}\n`;
+            text += `REASON: ${cdrData.reason}\n`;
+            text += `COURT: ${cdrData.court}\n`;
+            text += `COURT TIME: ${cdrData.courtTime}\n`;
+            text += `ALLOCATE TO: ${cdrData.allocateTo}\n`;
+            text += `CLIENT EXCUSED: ${cdrData.clientExcused ? 'Yes' : 'No'}\n`;
+            text += `FEE REMINDER: ${cdrData.feeReminder || 'N/A'}`;
+            
+            return text;
+        }
+        
+        // Get allocated to checkboxes
+        function getAllocatedTo() {
+            const allocated = [];
+            document.querySelectorAll('input[id^="allocate_"]:checked').forEach(cb => {
+                allocated.push(cb.value);
+            });
+            return allocated.join(', ') || 'TBD';
+        }
+        
+        // Send CDR to Zapier
+        function sendCDRToZapier() {
+            if (!currentCDRData) {
+                alert('Please generate a CDR first');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('cdrZapierStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.style.backgroundColor = '#fef3c7';
+            statusDiv.style.color = '#92400e';
+            statusDiv.textContent = 'Sending CDR to Zapier...';
+            
+            // Prepare payload with CDR data only
+            const payload = {
+                // Type to identify this as CDR only
+                type: 'CDR_ONLY',
+                
+                // Letter data - null for standalone CDR
+                letterData: null,
+                
+                // CDR data - always present for standalone CDR
+                cdrData: {
+                    outcomeCourt: currentCDRData.outcomeCourt,
+                    outcomeDate: currentCDRData.outcomeDate,
+                    startTime: currentCDRData.startTime,
+                    finishTime: currentCDRData.finishTime,
+                    courtDate: currentCDRData.courtDate,
+                    solicitor: currentCDRData.solicitor,
+                    clientName: currentCDRData.clientName,
+                    fileNumber: currentCDRData.fileNumber,
+                    reason: currentCDRData.reason,
+                    court: currentCDRData.court,
+                    courtTime: currentCDRData.courtTime,
+                    allocateTo: currentCDRData.allocateTo,
+                    clientExcused: currentCDRData.clientExcused,
+                    feeReminder: currentCDRData.feeReminder,
+                    cdrText: formatCDRText(currentCDRData)
+                },
+                
+                // Flags for Zapier to easily identify what's included
+                hasLetter: false,
+                hasCDR: true
+            };
+            
+            const formData = new FormData();
+            formData.append('data', JSON.stringify(payload));
+            
+            fetch('https://hooks.zapier.com/hooks/catch/19713185/u47iaxq/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    statusDiv.style.backgroundColor = '#d4edda';
+                    statusDiv.style.color = '#155724';
+                    statusDiv.textContent = '✓ CDR successfully sent to Zapier!';
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 3000);
+                } else {
+                    throw new Error('Failed to send');
+                }
+            })
+            .catch(error => {
+                statusDiv.style.backgroundColor = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.textContent = '✗ Failed to send CDR to Zapier. Please try again.';
+                console.error('Zapier error:', error);
+            });
+        }
+        
+        // Clear CDR form
+        function clearCDRForm() {
+            if (confirm('Clear all CDR fields?')) {
+                document.getElementById('cdrClientSelect').value = '';
+                document.getElementById('cdrOutcomeCourt').value = '';
+                document.getElementById('cdrOutcomeDate').value = '';
+                document.getElementById('cdrStartTime').value = '09:30';
+                document.getElementById('cdrFinishTime').value = '10:00';
+                document.getElementById('cdrCourtDate').value = '';
+                document.getElementById('cdrSolicitor').value = 'AAG';
+                document.getElementById('cdrClientName').value = '';
+                document.getElementById('cdrFileNumber').value = '';
+                document.getElementById('cdrReason').value = '';
+                document.getElementById('cdrCourt').value = '';
+                document.getElementById('cdrCourtTime').value = '09:30';
+                document.getElementById('cdrClientExcused').checked = false;
+                document.getElementById('cdrFeeReminder').value = '';
+                
+                // Clear all allocate checkboxes
+                document.querySelectorAll('input[id^="allocate_"]').forEach(cb => cb.checked = false);
+                
+                document.getElementById('cdrOutput').style.display = 'none';
+                currentCDRData = null;
+            }
+        }
+        
+        // Load client info for letter generation
+        function loadClientInfo() {
+            const clientId = parseInt(document.getElementById('clientSelect').value);
+            const clientInfoSection = document.getElementById('clientInfoSection');
+            
+            if (!clientId) {
+                clientInfoSection.style.display = 'none';
+                return;
+            }
+            
+            currentClient = clients.find(c => c.id === clientId);
+            if (!currentClient) return;
+            
+            clientInfoSection.style.display = 'block';
+            
+            // Populate client info grid
+            document.getElementById('clientInfoGrid').innerHTML = `
+                <div class="info-item">
+                    <div class="info-label">Client Name</div>
+                    <div class="info-value">${currentClient.name}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Address</div>
+                    <div class="info-value">${currentClient.address || 'Not provided'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Matter Number</div>
+                    <div class="info-value">${currentClient.matterNumber}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Court</div>
+                    <div class="info-value">${currentClient.court}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Matter Type</div>
+                    <div class="info-value">${currentClient.matterType}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Charges</div>
+                    <div class="info-value">${currentClient.charges}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Legal Aid</div>
+                    <div class="info-value">${currentClient.legalAid ? 'Yes' : 'No'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Next Court</div>
+                    <div class="info-value">${currentClient.nextCourt ? formatDate(currentClient.nextCourt) : 'TBD'}</div>
+                </div>
+            `;
+            
+            // Populate letter history
+            const historyList = document.getElementById('letterHistoryList');
+            if (currentClient.letterHistory && currentClient.letterHistory.length > 0) {
+                historyList.innerHTML = currentClient.letterHistory.map(letter => `
+                    <div class="letter-item">
+                        <div>
+                            <strong>${letter.type}</strong> - ${formatDate(letter.date)}
+                            <br><small>${letter.notes || ''}</small>
+                        </div>
+                        <span class="status-badge status-completed">Sent</span>
+                    </div>
+                `).join('');
+            } else {
+                historyList.innerHTML = '<p style="color: #6b7280; font-style: italic;">No letters sent yet</p>';
+            }
+        }
+        
+        // Update letter fields
+        function updateLetterFields() {
+            const letterType = document.getElementById('letterType').value;
+            const dynamicFields = document.getElementById('dynamicFields');
+            const cdrSection = document.getElementById('cdrForLetterSection');
+            
+            if (!letterType || !currentClient) {
+                dynamicFields.innerHTML = '';
+                cdrSection.style.display = 'none';
+                return;
+            }
+            
+            // Show CDR section for all letter types
+            cdrSection.style.display = 'block';
+            
+            let fieldsHTML = '';
+            
+            switch(letterType) {
+                case 'CCL':
+                    fieldsHTML = getCCLFields();
+                    break;
+                case 'Mention':
+                    fieldsHTML = getMentionFields();
+                    break;
+                case 'Final':
+                    fieldsHTML = getFinalFields();
+                    break;
+                case 'FeeReestimate':
+                    fieldsHTML = getFeeReestimateFields();
+                    break;
+            }
+            
+            dynamicFields.innerHTML = fieldsHTML;
+            
+            // Initialize any conditional logic
+            if (letterType === 'CCL') {
+                toggleLegalAidFields();
+                togglePleaOptions();
+            }
+        }
+        
+        // Toggle CDR fields in letter generation
+        function toggleCDRFields() {
+            const isChecked = document.getElementById('generateCDRWithLetter').checked;
+            document.getElementById('cdrFieldsInLetter').style.display = isChecked ? 'block' : 'none';
+        }
+        
+        // Generate prompt
+        function generatePrompt() {
+            const letterType = document.getElementById('letterType').value;
+            
+            if (!letterType || !currentClient) {
+                alert('Please select a client and letter type');
+                return;
+            }
+            
+            let prompt = '';
+            let cdrData = null;
+            
+            // Check if CDR should be generated
+            const generateCDR = document.getElementById('generateCDRWithLetter')?.checked;
+            if (generateCDR) {
+                const nextCourtDate = document.getElementById('nextCourtDate')?.value;
+                if (nextCourtDate) {
+                    cdrData = {
+                        outcomeCourt: currentClient.court,
+                        outcomeDate: getTodayDate(),
+                        startTime: '09:30',
+                        finishTime: '10:00',
+                        courtDate: nextCourtDate,
+                        solicitor: 'AAG',
+                        clientName: currentClient.name,
+                        fileNumber: currentClient.matterNumber,
+                        reason: document.getElementById('letterCDRReason')?.value || 'Mention',
+                        court: currentClient.court,
+                        courtTime: '09:30',
+                        allocateTo: getLetterAllocatedTo(),
+                        clientExcused: document.getElementById('letterCDRClientExcused')?.checked || false,
+                        feeReminder: ''
+                    };
+                }
+            }
+            
+            switch(letterType) {
+                case 'CCL':
+                    prompt = generateCCLPrompt();
+                    break;
+                case 'Mention':
+                    prompt = generateMentionPrompt();
+                    break;
+                case 'Final':
+                    prompt = generateFinalPrompt();
+                    break;
+                case 'FeeReestimate':
+                    prompt = generateFeeReestimatePrompt();
+                    break;
+            }
+            
+            // Add CDR to prompt if generated
+            if (cdrData) {
+                prompt += '\n\n--- CDR ALSO GENERATED ---\n';
+                prompt += formatCDRText(cdrData);
+                currentCDRData = cdrData;
+            }
+            
+            const outputDiv = document.getElementById('promptOutput');
+            outputDiv.textContent = prompt;
+            outputDiv.style.display = 'block';
+            
+            // Update letter history
+            if (!currentClient.letterHistory) currentClient.letterHistory = [];
+            currentClient.letterHistory.push({
+                type: letterType,
+                date: new Date().toISOString().slice(0,10),
+                notes: `Generated ${letterType} prompt${cdrData ? ' with CDR' : ''}`
+            });
+            
+            // Update letter sent status
+            switch(letterType) {
+                case 'CCL':
+                    currentClient.ccl = true;
+                    break;
+                case 'Mention':
+                    currentClient.mention = true;
+                    break;
+                case 'Final':
+                    currentClient.final = true;
+                    break;
+            }
+            
+            saveData();
+            updateUI();
+        }
+        
+        // Copy prompt
+        function copyPrompt() {
+            const promptText = document.getElementById('promptOutput').textContent;
+            if (!promptText) {
+                alert('Please generate a prompt first');
+                return;
+            }
+            
+            navigator.clipboard.writeText(promptText).then(() => {
+                alert('Prompt copied to clipboard!');
+            }).catch(err => {
+                // Fallback
+                const textArea = document.createElement('textarea');
+                textArea.value = promptText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Prompt copied to clipboard!');
+            });
+        }
+        
+        // Clear form
+        function clearForm() {
+            if (confirm('Clear all fields?')) {
+                document.getElementById('letterType').value = '';
+                document.getElementById('dynamicFields').innerHTML = '';
+                document.getElementById('promptOutput').style.display = 'none';
+            }
+        }
+        
+        // Send to Zapier
+        function sendToZapier() {
+            const promptText = document.getElementById('promptOutput').textContent;
+            const letterType = document.getElementById('letterType').value;
+            
+            if (!promptText || !currentClient || !letterType) {
+                alert('Please generate a prompt first');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('zapierStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.style.backgroundColor = '#fef3c7';
+            statusDiv.style.color = '#92400e';
+            statusDiv.textContent = 'Sending to Zapier...';
+            
+            // Check if CDR is included
+            const hasCDR = document.getElementById('generateCDRWithLetter')?.checked;
+            
+            // Prepare payload with separate letter and CDR data
+            const payload = {
+                // Type to identify what's being sent
+                type: hasCDR ? 'LETTER_AND_CDR' : letterType,
+                
+                // Letter data - always present when sending from letter generator
+                letterData: {
+                    letterType: letterType,
+                    prompt: promptText,
+                    clientName: currentClient.name,
+                    matterNumber: currentClient.matterNumber,
+                    court: currentClient.court,
+                    templateFileName: getTemplateFileName(letterType)
+                },
+                
+                // CDR data - only present if CDR checkbox is checked
+                cdrData: null,
+                
+                // Flags for Zapier to easily identify what's included
+                hasLetter: true,
+                hasCDR: hasCDR
+            };
+            
+            // Add CDR data if generated
+            if (hasCDR && currentCDRData) {
+                payload.cdrData = {
+                    outcomeCourt: currentCDRData.outcomeCourt,
+                    outcomeDate: currentCDRData.outcomeDate,
+                    startTime: currentCDRData.startTime,
+                    finishTime: currentCDRData.finishTime,
+                    courtDate: currentCDRData.courtDate,
+                    solicitor: currentCDRData.solicitor,
+                    clientName: currentCDRData.clientName,
+                    fileNumber: currentCDRData.fileNumber,
+                    reason: currentCDRData.reason,
+                    court: currentCDRData.court,
+                    courtTime: currentCDRData.courtTime,
+                    allocateTo: currentCDRData.allocateTo,
+                    clientExcused: currentCDRData.clientExcused,
+                    feeReminder: currentCDRData.feeReminder,
+                    cdrText: formatCDRText(currentCDRData)
+                };
+            }
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('data', JSON.stringify(payload));
+            
+            fetch('https://hooks.zapier.com/hooks/catch/19713185/u47iaxq/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    statusDiv.style.backgroundColor = '#d4edda';
+                    statusDiv.style.color = '#155724';
+                    statusDiv.textContent = hasCDR ? 
+                        '✓ Successfully sent letter and CDR to Zapier!' : 
+                        '✓ Successfully sent to Zapier!';
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 3000);
+                } else {
+                    throw new Error('Failed to send');
+                }
+            })
+            .catch(error => {
+                statusDiv.style.backgroundColor = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.textContent = '✗ Failed to send to Zapier. Please try again.';
+                console.error('Zapier error:', error);
+            });
+        }
+        
+        // Update Excel record
+        function updateExcelRecord() {
+            const letterType = document.getElementById('letterType').value;
+            
+            if (!currentClient || !letterType) {
+                alert('Please select a client and generate a letter first');
+                return;
+            }
+            
+            // Update the client record
+            const clientIndex = clients.findIndex(c => c.id === currentClient.id);
+            if (clientIndex !== -1) {
+                // Update letter sent status
+                switch(letterType) {
+                    case 'CCL':
+                        clients[clientIndex].ccl = true;
+                        break;
+                    case 'Mention':
+                        clients[clientIndex].mention = true;
+                        break;
+                    case 'Final':
+                        clients[clientIndex].final = true;
+                        break;
+                }
+                
+                // Update last updated date
+                clients[clientIndex].lastUpdated = new Date().toLocaleDateString('en-AU');
+                
+                // Save to localStorage
+                saveData();
+                
+                // Update UI
+                updateUI();
+                
+                // Export to Excel automatically
+                exportToExcel();
+                
+                alert(`Excel database updated!\n${letterType} marked as sent for ${currentClient.name}`);
+            }
+        }
+        
+        // Add client
+        function addClient(event) {
+            event.preventDefault();
+            
+            const newClient = {
+                id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
+                name: document.getElementById('newClientName').value,
+                address: document.getElementById('newClientAddress').value,
+                matterNumber: document.getElementById('newMatterNumber').value,
+                court: document.getElementById('newCourt').value,
+                matterType: document.getElementById('newMatterType').value,
+                charges: document.getElementById('newCharges').value,
+                legalAid: document.getElementById('newLegalAid').value === 'Yes',
+                nextCourt: document.getElementById('newNextCourt').value,
+                status: 'Active',
+                ccl: false,
+                mention: false,
+                final: false,
+                letterHistory: []
+            };
+            
+            clients.push(newClient);
+            saveData();
+            updateUI();
+            closeModal();
+            
+            alert('Client added successfully!');
+        }
+        
+        // Select client for letter from master list
+        function selectClientForLetter(clientId) {
+            // Find the generator tab button and trigger click
+            const generatorTab = document.querySelector('.tab:nth-child(2)');
+            if (generatorTab) {
+                generatorTab.click();
+            }
+            document.getElementById('clientSelect').value = clientId;
+            loadClientInfo();
+        }
+        
+        // Helper function to get template file name
+        function getTemplateFileName(letterType) {
+            const templateMap = {
+                'CCL': 'CCL_Template.docx',
+                'Mention': 'Mention_Template.docx',
+                'Final': 'Final_Template.docx',
+                'FeeReestimate': 'FeeReestimate_Template.docx'
+            };
+            return templateMap[letterType] || 'Template.docx';
+        }
+        
+        // Get letter allocated to
+        function getLetterAllocatedTo() {
+            const allocated = [];
+            document.querySelectorAll('input[id^="letter_allocate_"]:checked').forEach(cb => {
+                allocated.push(cb.value);
+            });
+            return allocated.join(', ') || 'TBD';
+        }
+        
+        // Utility functions
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            return date.toLocaleDateString('en-AU', options);
+        }
+        
+        function getTodayDate() {
+            return new Date().toISOString().split('T')[0];
+        }
+        
         function loadExcelFile() {
             const fileInput = document.getElementById('excelFile');
             const file = fileInput.files[0];
