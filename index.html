@@ -8,12 +8,48 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <script>
-        // Define all global functions BEFORE the HTML loads
+        // Define ALL functions in global scope FIRST
         
         // Global variables
         var clients = [];
         var currentClient = null;
         var currentCDRData = null;
+        
+        // Save data to localStorage - MUST BE DEFINED FIRST
+        function saveData() {
+            localStorage.setItem('legalClients', JSON.stringify(clients));
+        }
+        
+        // Load saved data from localStorage
+        function loadSavedData() {
+            const savedClients = localStorage.getItem('legalClients');
+            if (savedClients) {
+                clients = JSON.parse(savedClients);
+                updateDatabaseStatus(true);
+            }
+        }
+        
+        // Update database status indicator
+        function updateDatabaseStatus(connected) {
+            const status = document.getElementById('databaseStatus');
+            if (status) {
+                if (connected) {
+                    status.textContent = `Database: Connected (${clients.length} clients)`;
+                    status.className = 'database-status status-connected';
+                } else {
+                    status.textContent = 'Database: Not Connected';
+                    status.className = 'database-status status-disconnected';
+                }
+            }
+        }
+        
+        // Update all UI elements
+        function updateUI() {
+            loadClientTable();
+            loadClientSelect();
+            loadCDRClientSelect();
+            updateAnalytics();
+        }
         
         // Switch between tabs
         function switchTab(tabName, event) {
