@@ -127,6 +127,86 @@
             return text;
         }
         
+        // Format CDR as HTML (matching Outlook template)
+        function formatCDRHTML(cdrData) {
+            return `
+            <div style="font-family: Arial, sans-serif; font-size: 10pt; color: black;">
+                <p style="text-align: center; font-weight: bold; margin: 20px 0;">COURT OUTCOME</p>
+                
+                <table style="border-collapse: collapse; width: 100%; max-width: 650px;">
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">COURT:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.outcomeCourt || ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">DATE:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${formatDate(cdrData.outcomeDate) || ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">CORAM:</td>
+                        <td style="width: 70%; padding: 5px 10px;"></td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">CROWN:</td>
+                        <td style="width: 70%; padding: 5px 10px;"></td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">START:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.startTime || ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">FINISH:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.finishTime || ''}</td>
+                    </tr>
+                </table>
+                
+                <p style="text-align: center; font-weight: bold; margin: 20px 0;">COURT DIARY REQUEST</p>
+                
+                <table style="border-collapse: collapse; width: 100%; max-width: 650px;">
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">COURT DATE:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${formatDate(cdrData.courtDate) || ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">SOLICITOR:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.solicitor || ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">CLIENT:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.clientName || ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">FILE NUMBER:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.fileNumber || ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">REASON:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.reason || ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">COURT:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.court || ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">COURT TIME:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.courtTime || ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">ALLOCATE TO:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.allocateTo || ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">CLIENT EXCUSED:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.clientExcused ? 'Yes' : 'No'}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 30%; padding: 5px 10px; font-weight: bold;">FEE REMINDER:</td>
+                        <td style="width: 70%; padding: 5px 10px;">${cdrData.feeReminder || ''}</td>
+                    </tr>
+                </table>
+            </div>`;
+        }
+        
         // Get allocated to checkboxes
         function getAllocatedTo() {
             const allocated = [];
@@ -173,7 +253,8 @@
                     allocateTo: currentCDRData.allocateTo,
                     clientExcused: currentCDRData.clientExcused,
                     feeReminder: currentCDRData.feeReminder,
-                    cdrText: formatCDRText(currentCDRData)
+                    cdrText: formatCDRText(currentCDRData),
+                    cdrHTML: formatCDRHTML(currentCDRData)
                 },
                 
                 // Flags for Zapier to easily identify what's included
@@ -526,7 +607,8 @@
                     allocateTo: currentCDRData.allocateTo,
                     clientExcused: currentCDRData.clientExcused,
                     feeReminder: currentCDRData.feeReminder,
-                    cdrText: formatCDRText(currentCDRData)
+                    cdrText: formatCDRText(currentCDRData),
+                    cdrHTML: formatCDRHTML(currentCDRData)
                 };
             }
             
@@ -1870,7 +1952,7 @@
     <button class="add-client-btn" onclick="openModal()" title="Add New Client">+</button>
     
     <script>
-        // Rest of the functions that weren't defined in the head
+        // Rest of the functions that need DOM to be loaded
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1910,82 +1992,6 @@
                 status.textContent = 'Database: Not Connected';
                 status.className = 'database-status status-disconnected';
             }
-        }
-        
-        // Load Excel file
-        function loadExcelFile() {
-            const fileInput = document.getElementById('excelFile');
-            const file = fileInput.files[0];
-            
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                    
-                    // Convert Excel data to our format
-                    clients = jsonData.map((row, index) => ({
-                        id: index + 1,
-                        name: row['Client Name'] || '',
-                        address: row['Address'] || '',
-                        matterNumber: row['Matter Reference'] || '',
-                        court: row['Court'] || '',
-                        matterType: row['Matter Type'] || '',
-                        charges: row['Charges'] || '',
-                        legalAid: row['Legal Aid'] === 'Yes',
-                        contribution: row['Contribution'] || '',
-                        status: row['Status'] || 'Active',
-                        ccl: row['CCL Sent'] === 'Yes' || false,
-                        mention: row['Mention Sent'] === 'Yes' || false,
-                        final: row['Final Sent'] === 'Yes' || false,
-                        nextCourt: row['Next Court Date'] || '',
-                        letterHistory: []
-                    }));
-                    
-                    saveData();
-                    updateUI();
-                    updateDatabaseStatus(true);
-                    alert(`Successfully loaded ${clients.length} clients from Excel`);
-                } catch (error) {
-                    alert('Error loading Excel file: ' + error.message);
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-        
-        // Export to Excel
-        function exportToExcel() {
-            if (clients.length === 0) {
-                alert('No data to export');
-                return;
-            }
-            
-            // Prepare data for export
-            const exportData = clients.map(client => ({
-                'Client Name': client.name,
-                'Address': client.address,
-                'Matter Reference': client.matterNumber,
-                'Court': client.court,
-                'Matter Type': client.matterType,
-                'Charges': client.charges,
-                'Legal Aid': client.legalAid ? 'Yes' : 'No',
-                'Contribution': client.contribution || '',
-                'Status': client.status,
-                'CCL Sent': client.ccl ? 'Yes' : 'No',
-                'Mention Sent': client.mention ? 'Yes' : 'No',
-                'Final Sent': client.final ? 'Yes' : 'No',
-                'Next Court Date': client.nextCourt,
-                'Last Updated': new Date().toLocaleDateString('en-AU')
-            }));
-            
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            XLSX.utils.book_append_sheet(wb, ws, 'Clients');
-            XLSX.writeFile(wb, `legal_clients_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
         
         // Load client table
