@@ -8,26 +8,75 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <script>
-        // Define ALL functions in global scope FIRST
-        
-        // Global variables
+        // ===================================================================
+        // GLOBAL VARIABLES - Define at the very top
+        // ===================================================================
         var clients = [];
         var currentClient = null;
         var currentCDRData = null;
         
-        // Save data to localStorage - MUST BE DEFINED FIRST
+        // ===================================================================
+        // UTILITY FUNCTIONS - Define these first as they're used everywhere
+        // ===================================================================
+        
+        // Format date for display
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            return date.toLocaleDateString('en-AU', options);
+        }
+        
+        // Get today's date in YYYY-MM-DD format
+        function getTodayDate() {
+            return new Date().toISOString().split('T')[0];
+        }
+        
+        // Get template file name based on letter type
+        function getTemplateFileName(letterType) {
+            const templateMap = {
+                'CCL': 'CCL_Template.docx',
+                'Mention': 'Mention_Template.docx',
+                'Final': 'Final_Template.docx',
+                'FeeReestimate': 'FeeReestimate_Template.docx'
+            };
+            return templateMap[letterType] || 'Template.docx';
+        }
+        
+        // ===================================================================
+        // DATA PERSISTENCE FUNCTIONS
+        // ===================================================================
+        
+        // Save data to localStorage
         function saveData() {
-            localStorage.setItem('legalClients', JSON.stringify(clients));
+            try {
+                // Note: localStorage won't work in Claude artifacts, but keeping for external use
+                if (typeof(Storage) !== "undefined") {
+                    localStorage.setItem('legalClients', JSON.stringify(clients));
+                }
+            } catch(e) {
+                console.log('Storage not available in this environment');
+            }
         }
         
         // Load saved data from localStorage
         function loadSavedData() {
-            const savedClients = localStorage.getItem('legalClients');
-            if (savedClients) {
-                clients = JSON.parse(savedClients);
-                updateDatabaseStatus(true);
+            try {
+                if (typeof(Storage) !== "undefined") {
+                    const savedClients = localStorage.getItem('legalClients');
+                    if (savedClients) {
+                        clients = JSON.parse(savedClients);
+                        updateDatabaseStatus(true);
+                    }
+                }
+            } catch(e) {
+                console.log('Storage not available in this environment');
             }
         }
+        
+        // ===================================================================
+        // UI UPDATE FUNCTIONS
+        // ===================================================================
         
         // Update database status indicator
         function updateDatabaseStatus(connected) {
@@ -43,13 +92,149 @@
             }
         }
         
-        // Update all UI elements
+        // Master update function that calls all UI updates
         function updateUI() {
             loadClientTable();
             loadClientSelect();
             loadCDRClientSelect();
             updateAnalytics();
         }
+        
+        // Load client table
+        function loadClientTable() {
+            const tbody = document.getElementById('clientTableBody');
+            if (!tbody) return;
+            
+            if (clients.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
+                            No clients loaded. Please upload an Excel database or add clients manually.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = clients.map(client => `
+                <tr>
+                    <td><strong>${client.name}</strong></td>
+                    <td>${client.matterNumber}</td>
+                    <td>${client.court}</td>
+                    <td>${client.charges}</td>
+                    <td><span class="status-badge status-${client.status.toLowerCase()}">${client.status}</span></td>
+                    <td>${client.ccl ? '✅' : '❌'}</td>
+                    <td>${client.mention ? '✅' : '❌'}</td>
+                    <td>${client.final ? '✅' : '❌'}</td>
+                    <td>${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</td>
+                    <td>
+                        <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="selectClientForLetter(${client.id})">Generate Letter</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // Load client select dropdown
+        function loadClientSelect() {
+            const select = document.getElementById('clientSelect');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">-- Select a Client --</option>';
+            
+            clients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client.id;
+                option.textContent = `${client.name} (${client.matterNumber})`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Load CDR client select dropdown
+        function loadCDRClientSelect() {
+            const select = document.getElementById('cdrClientSelect');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">-- Manual Entry --</option>';
+            
+            clients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client.id;
+                option.textContent = `${client.name} (${client.matterNumber})`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Update analytics dashboard
+        function updateAnalytics() {
+            const totalMattersEl = document.getElementById('totalMatters');
+            const activeMattersEl = document.getElementById('activeMatters');
+            const pendingLettersEl = document.getElementById('pendingLetters');
+            const upcomingCourtEl = document.getElementById('upcomingCourt');
+            
+            if (totalMattersEl) totalMattersEl.textContent = clients.length;
+            if (activeMattersEl) activeMattersEl.textContent = clients.filter(c => c.status === 'Active').length;
+            
+            // Count pending letters (clients without CCL)
+            const pendingLetters = clients.filter(c => !c.ccl).length;
+            if (pendingLettersEl) pendingLettersEl.textContent = pendingLetters;
+            
+            // Count upcoming court dates (next 7 days)
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            const upcoming = clients.filter(c => {
+                if (!c.nextCourt) return false;
+                const courtDate = new Date(c.nextCourt);
+                return courtDate <= nextWeek && courtDate >= new Date();
+            }).length;
+            if (upcomingCourtEl) upcomingCourtEl.textContent = upcoming;
+            
+            // Court breakdown
+            const courtBreakdown = {};
+            clients.forEach(c => {
+                courtBreakdown[c.court] = (courtBreakdown[c.court] || 0) + 1;
+            });
+            
+            const courtDiv = document.getElementById('courtBreakdown');
+            if (courtDiv) {
+                courtDiv.innerHTML = Object.entries(courtBreakdown)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([court, count]) => `
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                            <span>${court}</span>
+                            <strong>${count}</strong>
+                        </div>
+                    `).join('') || '<p style="color: #6b7280;">No data available</p>';
+            }
+            
+            // Letter status chart
+            const statusDiv = document.getElementById('letterStatusChart');
+            if (statusDiv) {
+                const cclSent = clients.filter(c => c.ccl).length;
+                const mentionSent = clients.filter(c => c.mention).length;
+                const finalSent = clients.filter(c => c.final).length;
+                
+                statusDiv.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; font-weight: bold; color: #3b82f6;">${cclSent}</div>
+                            <div>CCL Sent</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; font-weight: bold; color: #16a34a;">${mentionSent}</div>
+                            <div>Mention Letters</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; font-weight: bold; color: #dc2626;">${finalSent}</div>
+                            <div>Final Letters</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // ===================================================================
+        // NAVIGATION FUNCTIONS
+        // ===================================================================
         
         // Switch between tabs
         function switchTab(tabName, event) {
@@ -59,6 +244,7 @@
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
+            
             var tabElement = document.getElementById(tabName);
             if (tabElement) {
                 tabElement.classList.add('active');
@@ -67,20 +253,73 @@
                 event.target.classList.add('active');
             }
             
-            if (tabName === 'analytics' && typeof updateAnalytics === 'function') {
+            if (tabName === 'analytics') {
                 updateAnalytics();
             }
         }
         
-        // Define other critical functions that are called from HTML
+        // ===================================================================
+        // MODAL FUNCTIONS
+        // ===================================================================
+        
+        // Open add client modal
         function openModal() {
             document.getElementById('addClientModal').style.display = 'block';
         }
         
+        // Close add client modal
         function closeModal() {
             document.getElementById('addClientModal').style.display = 'none';
             document.getElementById('addClientForm').reset();
         }
+        
+        // ===================================================================
+        // CLIENT MANAGEMENT FUNCTIONS
+        // ===================================================================
+        
+        // Add new client
+        function addClient(event) {
+            event.preventDefault();
+            
+            const newClient = {
+                id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
+                name: document.getElementById('newClientName').value,
+                address: document.getElementById('newClientAddress').value,
+                matterNumber: document.getElementById('newMatterNumber').value,
+                court: document.getElementById('newCourt').value,
+                matterType: document.getElementById('newMatterType').value,
+                charges: document.getElementById('newCharges').value,
+                legalAid: document.getElementById('newLegalAid').value === 'Yes',
+                nextCourt: document.getElementById('newNextCourt').value,
+                status: 'Active',
+                ccl: false,
+                mention: false,
+                final: false,
+                letterHistory: []
+            };
+            
+            clients.push(newClient);
+            saveData();
+            updateUI();
+            closeModal();
+            
+            alert('Client added successfully!');
+        }
+        
+        // Select client for letter from master list
+        function selectClientForLetter(clientId) {
+            // Switch to generator tab
+            const generatorTab = document.querySelector('.tab:nth-child(2)');
+            if (generatorTab) {
+                generatorTab.click();
+            }
+            document.getElementById('clientSelect').value = clientId;
+            loadClientInfo();
+        }
+        
+        // ===================================================================
+        // CDR FUNCTIONS
+        // ===================================================================
         
         // Load CDR client info
         function loadCDRClientInfo() {
@@ -110,32 +349,22 @@
             }
         }
         
-        // Generate CDR
-        function generateCDR() {
-            const cdrData = {
-                outcomeCourt: document.getElementById('cdrOutcomeCourt').value,
-                outcomeDate: document.getElementById('cdrOutcomeDate').value,
-                startTime: document.getElementById('cdrStartTime').value,
-                finishTime: document.getElementById('cdrFinishTime').value,
-                courtDate: document.getElementById('cdrCourtDate').value,
-                solicitor: document.getElementById('cdrSolicitor').value,
-                clientName: document.getElementById('cdrClientName').value,
-                fileNumber: document.getElementById('cdrFileNumber').value,
-                reason: document.getElementById('cdrReason').value,
-                court: document.getElementById('cdrCourt').value,
-                courtTime: document.getElementById('cdrCourtTime').value,
-                allocateTo: getAllocatedTo(),
-                clientExcused: document.getElementById('cdrClientExcused').checked,
-                feeReminder: document.getElementById('cdrFeeReminder').value
-            };
-            
-            currentCDRData = cdrData;
-            
-            let cdrText = formatCDRText(cdrData);
-            
-            const outputDiv = document.getElementById('cdrOutput');
-            outputDiv.textContent = cdrText;
-            outputDiv.style.display = 'block';
+        // Get allocated to checkboxes
+        function getAllocatedTo() {
+            const allocated = [];
+            document.querySelectorAll('input[id^="allocate_"]:checked').forEach(cb => {
+                allocated.push(cb.value);
+            });
+            return allocated.join(', ') || 'TBD';
+        }
+        
+        // Get letter allocated to
+        function getLetterAllocatedTo() {
+            const allocated = [];
+            document.querySelectorAll('input[id^="letter_allocate_"]:checked').forEach(cb => {
+                allocated.push(cb.value);
+            });
+            return allocated.join(', ') || 'TBD';
         }
         
         // Format CDR text
@@ -243,13 +472,32 @@
             </div>`;
         }
         
-        // Get allocated to checkboxes
-        function getAllocatedTo() {
-            const allocated = [];
-            document.querySelectorAll('input[id^="allocate_"]:checked').forEach(cb => {
-                allocated.push(cb.value);
-            });
-            return allocated.join(', ') || 'TBD';
+        // Generate CDR
+        function generateCDR() {
+            const cdrData = {
+                outcomeCourt: document.getElementById('cdrOutcomeCourt').value,
+                outcomeDate: document.getElementById('cdrOutcomeDate').value,
+                startTime: document.getElementById('cdrStartTime').value,
+                finishTime: document.getElementById('cdrFinishTime').value,
+                courtDate: document.getElementById('cdrCourtDate').value,
+                solicitor: document.getElementById('cdrSolicitor').value,
+                clientName: document.getElementById('cdrClientName').value,
+                fileNumber: document.getElementById('cdrFileNumber').value,
+                reason: document.getElementById('cdrReason').value,
+                court: document.getElementById('cdrCourt').value,
+                courtTime: document.getElementById('cdrCourtTime').value,
+                allocateTo: getAllocatedTo(),
+                clientExcused: document.getElementById('cdrClientExcused').checked,
+                feeReminder: document.getElementById('cdrFeeReminder').value
+            };
+            
+            currentCDRData = cdrData;
+            
+            let cdrText = formatCDRText(cdrData);
+            
+            const outputDiv = document.getElementById('cdrOutput');
+            outputDiv.textContent = cdrText;
+            outputDiv.style.display = 'block';
         }
         
         // Send CDR to Zapier
@@ -267,13 +515,8 @@
             
             // Prepare payload with CDR data only
             const payload = {
-                // Type to identify this as CDR only
                 type: 'CDR_ONLY',
-                
-                // Letter data - null for standalone CDR
                 letterData: null,
-                
-                // CDR data - always present for standalone CDR
                 cdrData: {
                     outcomeCourt: currentCDRData.outcomeCourt,
                     outcomeDate: currentCDRData.outcomeDate,
@@ -292,8 +535,6 @@
                     cdrText: formatCDRText(currentCDRData),
                     cdrHTML: formatCDRHTML(currentCDRData)
                 },
-                
-                // Flags for Zapier to easily identify what's included
                 hasLetter: false,
                 hasCDR: true
             };
@@ -350,6 +591,10 @@
                 currentCDRData = null;
             }
         }
+        
+        // ===================================================================
+        // LETTER GENERATION FUNCTIONS
+        // ===================================================================
         
         // Load client info for letter generation
         function loadClientInfo() {
@@ -466,7 +711,7 @@
             document.getElementById('cdrFieldsInLetter').style.display = isChecked ? 'block' : 'none';
         }
         
-        // Generate prompt
+        // Generate prompt (stub - needs letter-specific prompt generation functions)
         function generatePrompt() {
             const letterType = document.getElementById('letterType').value;
             
@@ -475,7 +720,15 @@
                 return;
             }
             
-            let prompt = '';
+            let prompt = `Generate ${letterType} letter for:\n`;
+            prompt += `Client: ${currentClient.name}\n`;
+            prompt += `Matter: ${currentClient.matterNumber}\n`;
+            prompt += `Court: ${currentClient.court}\n`;
+            prompt += `Charges: ${currentClient.charges}\n\n`;
+            
+            // Add specific letter content based on type
+            prompt += `[Letter specific content would be generated here based on form inputs]\n`;
+            
             let cdrData = null;
             
             // Check if CDR should be generated
@@ -500,21 +753,6 @@
                         feeReminder: ''
                     };
                 }
-            }
-            
-            switch(letterType) {
-                case 'CCL':
-                    prompt = generateCCLPrompt();
-                    break;
-                case 'Mention':
-                    prompt = generateMentionPrompt();
-                    break;
-                case 'Final':
-                    prompt = generateFinalPrompt();
-                    break;
-                case 'FeeReestimate':
-                    prompt = generateFeeReestimatePrompt();
-                    break;
             }
             
             // Add CDR to prompt if generated
@@ -553,7 +791,7 @@
             updateUI();
         }
         
-        // Copy prompt
+        // Copy prompt to clipboard
         function copyPrompt() {
             const promptText = document.getElementById('promptOutput').textContent;
             if (!promptText) {
@@ -603,12 +841,9 @@
             // Check if CDR is included
             const hasCDR = document.getElementById('generateCDRWithLetter')?.checked;
             
-            // Prepare payload with separate letter and CDR data
+            // Prepare payload
             const payload = {
-                // Type to identify what's being sent
                 type: hasCDR ? 'LETTER_AND_CDR' : letterType,
-                
-                // Letter data - always present when sending from letter generator
                 letterData: {
                     letterType: letterType,
                     prompt: promptText,
@@ -617,11 +852,7 @@
                     court: currentClient.court,
                     templateFileName: getTemplateFileName(letterType)
                 },
-                
-                // CDR data - only present if CDR checkbox is checked
                 cdrData: null,
-                
-                // Flags for Zapier to easily identify what's included
                 hasLetter: true,
                 hasCDR: hasCDR
             };
@@ -719,78 +950,11 @@
             }
         }
         
-        // Add client
-        function addClient(event) {
-            event.preventDefault();
-            
-            const newClient = {
-                id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
-                name: document.getElementById('newClientName').value,
-                address: document.getElementById('newClientAddress').value,
-                matterNumber: document.getElementById('newMatterNumber').value,
-                court: document.getElementById('newCourt').value,
-                matterType: document.getElementById('newMatterType').value,
-                charges: document.getElementById('newCharges').value,
-                legalAid: document.getElementById('newLegalAid').value === 'Yes',
-                nextCourt: document.getElementById('newNextCourt').value,
-                status: 'Active',
-                ccl: false,
-                mention: false,
-                final: false,
-                letterHistory: []
-            };
-            
-            clients.push(newClient);
-            saveData();
-            updateUI();
-            closeModal();
-            
-            alert('Client added successfully!');
-        }
+        // ===================================================================
+        // EXCEL IMPORT/EXPORT FUNCTIONS
+        // ===================================================================
         
-        // Select client for letter from master list
-        function selectClientForLetter(clientId) {
-            // Find the generator tab button and trigger click
-            const generatorTab = document.querySelector('.tab:nth-child(2)');
-            if (generatorTab) {
-                generatorTab.click();
-            }
-            document.getElementById('clientSelect').value = clientId;
-            loadClientInfo();
-        }
-        
-        // Helper function to get template file name
-        function getTemplateFileName(letterType) {
-            const templateMap = {
-                'CCL': 'CCL_Template.docx',
-                'Mention': 'Mention_Template.docx',
-                'Final': 'Final_Template.docx',
-                'FeeReestimate': 'FeeReestimate_Template.docx'
-            };
-            return templateMap[letterType] || 'Template.docx';
-        }
-        
-        // Get letter allocated to
-        function getLetterAllocatedTo() {
-            const allocated = [];
-            document.querySelectorAll('input[id^="letter_allocate_"]:checked').forEach(cb => {
-                allocated.push(cb.value);
-            });
-            return allocated.join(', ') || 'TBD';
-        }
-        
-        // Utility functions
-        function formatDate(dateString) {
-            if (!dateString) return '';
-            const date = new Date(dateString);
-            const options = { day: 'numeric', month: 'long', year: 'numeric' };
-            return date.toLocaleDateString('en-AU', options);
-        }
-        
-        function getTodayDate() {
-            return new Date().toISOString().split('T')[0];
-        }
-        
+        // Load Excel file
         function loadExcelFile() {
             const fileInput = document.getElementById('excelFile');
             const file = fileInput.files[0];
@@ -830,11 +994,13 @@
                     alert(`Successfully loaded ${clients.length} clients from Excel`);
                 } catch (error) {
                     alert('Error loading Excel file: ' + error.message);
+                    console.error('Excel loading error:', error);
                 }
             };
             reader.readAsArrayBuffer(file);
         }
         
+        // Export to Excel
         function exportToExcel() {
             if (clients.length === 0) {
                 alert('No data to export');
@@ -864,8 +1030,507 @@
             XLSX.utils.book_append_sheet(wb, ws, 'Clients');
             XLSX.writeFile(wb, `legal_clients_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
+        
+        // ===================================================================
+        // LETTER FIELD GENERATION FUNCTIONS
+        // ===================================================================
+        
+        function getCCLFields() {
+            return `
+                <div class="section">
+                    <div class="section-title">Contact Details</div>
+                    
+                    <div class="form-group">
+                        <label for="contactMethod">Contact Method*</label>
+                        <select id="contactMethod" required>
+                            <option value="">Select Contact Method</option>
+                            <option value="Office attendance">Office attendance</option>
+                            <option value="Phone call">Phone call</option>
+                            <option value="Email">Email</option>
+                            <option value="Police station">Police station</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="contactDate">Contact Date*</label>
+                        <input type="date" id="contactDate" value="${getTodayDate()}" required>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Charges</div>
+                    
+                    <div class="charges-section">
+                        <div class="charges-category">
+                            <h4>Violence Offences</h4>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_affray" value="Affray - s93C Crimes Act">
+                                    <label for="charge_affray">Affray - s93C Crimes Act</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_assault" value="Common Assault - s61 Crimes Act">
+                                    <label for="charge_assault">Common Assault - s61 Crimes Act</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_abh" value="Assault occasioning ABH - s59 Crimes Act">
+                                    <label for="charge_abh">Assault occasioning ABH - s59</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_assault_police" value="Assault Police - s60 Crimes Act">
+                                    <label for="charge_assault_police">Assault Police - s60 Crimes Act</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_resist" value="Resist Officer - s58 Crimes Act">
+                                    <label for="charge_resist">Resist Officer - s58 Crimes Act</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="charges-category">
+                            <h4>Domestic Violence</h4>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_breach_avo" value="Breach AVO - s14 CDPV Act">
+                                    <label for="charge_breach_avo">Breach AVO - s14 CDPV Act</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_stalk" value="Stalk/Intimidate - s13 CDPV Act">
+                                    <label for="charge_stalk">Stalk/Intimidate - s13 CDPV Act</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_destroy" value="Destroy/Damage Property - s195 Crimes Act">
+                                    <label for="charge_destroy">Destroy/Damage Property - s195</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="charges-category">
+                            <h4>Traffic Offences</h4>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_low_pca" value="Low Range PCA - s110(3) Road Transport Act">
+                                    <label for="charge_low_pca">Low Range PCA - s110(3)</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_mid_pca" value="Mid Range PCA - s110(4) Road Transport Act">
+                                    <label for="charge_mid_pca">Mid Range PCA - s110(4)</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_high_pca" value="High Range PCA - s110(5) Road Transport Act">
+                                    <label for="charge_high_pca">High Range PCA - s110(5)</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_disqualified" value="Drive whilst disqualified - s54(1) Road Transport Act">
+                                    <label for="charge_disqualified">Drive whilst disqualified - s54(1)</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_suspended" value="Drive whilst suspended - s54(1) Road Transport Act">
+                                    <label for="charge_suspended">Drive whilst suspended - s54(1)</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="charges-category">
+                            <h4>Drug Offences</h4>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_possess" value="Possess Prohibited Drug - s10 DMTA">
+                                    <label for="charge_possess">Possess Prohibited Drug - s10</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_supply" value="Supply Prohibited Drug - s25 DMTA">
+                                    <label for="charge_supply">Supply Prohibited Drug - s25</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="charges-category">
+                            <h4>Property Offences</h4>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_larceny" value="Larceny - s117 Crimes Act">
+                                    <label for="charge_larceny">Larceny - s117 Crimes Act</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="charge_goods" value="Goods in Custody - s527C Crimes Act">
+                                    <label for="charge_goods">Goods in Custody - s527C</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="additionalCharges">Additional Charges</label>
+                        <input type="text" id="additionalCharges" placeholder="Enter any additional charges">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="counts">Number of Counts</label>
+                        <input type="number" id="counts" min="1" placeholder="e.g., 3">
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Legal Aid & Fees</div>
+                    
+                    <div class="form-group">
+                        <label for="legalAidStatus">Legal Aid?*</label>
+                        <select id="legalAidStatus" onchange="toggleLegalAidFields()" required>
+                            <option value="">Select</option>
+                            <option value="Yes" ${currentClient && currentClient.legalAid ? 'selected' : ''}>Yes</option>
+                            <option value="No" ${currentClient && !currentClient.legalAid ? 'selected' : ''}>No</option>
+                        </select>
+                    </div>
+                    
+                    <div class="conditional" id="legalAidDetails">
+                        <div class="form-group">
+                            <label for="contribution">Contribution Amount ($)</label>
+                            <input type="number" id="contribution" placeholder="Leave blank if no contribution">
+                        </div>
+                    </div>
+                    
+                    <div class="conditional" id="privateDetails">
+                        <div class="form-group">
+                            <label for="estimate">Estimate Amount ($)*</label>
+                            <input type="number" id="estimate" placeholder="e.g., 3500">
+                        </div>
+                        <div class="form-group">
+                            <label for="depositPaid">Deposit Paid?</label>
+                            <select id="depositPaid" onchange="toggleDepositAmount()">
+                                <option value="No">No</option>
+                                <option value="Yes">Yes</option>
+                            </select>
+                        </div>
+                        <div class="conditional" id="depositDetails">
+                            <div class="form-group">
+                                <label for="depositAmount">Deposit Amount ($)</label>
+                                <input type="number" id="depositAmount" placeholder="e.g., 1000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Instructions</div>
+                    
+                    <div class="form-group">
+                        <label for="plea">Plea*</label>
+                        <select id="plea" onchange="togglePleaOptions()" required>
+                            <option value="">Select Plea</option>
+                            <option value="Guilty">Guilty</option>
+                            <option value="Not Guilty">Not Guilty</option>
+                            ${currentClient && currentClient.matterType === 'Criminal - Indictable' ? '<option value="No plea yet (indictable)">No plea yet (indictable)</option>' : ''}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="clientInstructions">Client Instructions*</label>
+                        <textarea id="clientInstructions" placeholder="What are the client's instructions moving forward?" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="nextCourtDate">Next Court Date</label>
+                        <input type="date" id="nextCourtDate" value="${currentClient && currentClient.nextCourt ? currentClient.nextCourt : ''}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="requiredAttend">Client Required to Attend?</label>
+                        <select id="requiredAttend">
+                            <option value="">Select</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    
+                    <div class="conditional" id="sentenceMaterials">
+                        <label>Sentence Materials Discussed</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="mat_references" value="Character references">
+                                <label for="mat_references">Character references</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="mat_psych_existing" value="Psych report - existing doctor">
+                                <label for="mat_psych_existing">Psych report - existing doctor</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="mat_psych_referral" value="Psych report - need referral">
+                                <label for="mat_psych_referral">Psych report - need referral</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="mat_traffic" value="Traffic Offenders Program">
+                                <label for="mat_traffic">Traffic Offenders Program</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="mat_treatment" value="Drug/Alcohol treatment">
+                                <label for="mat_treatment">Drug/Alcohol treatment</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="mat_other" value="Other treatment proof">
+                                <label for="mat_other">Other treatment proof</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Additional Information</div>
+                    <div class="form-group">
+                        <label for="additionalInfo">Additional Information</label>
+                        <textarea id="additionalInfo" placeholder="Any other relevant information for this letter"></textarea>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getMentionFields() {
+            return `
+                <div class="section">
+                    <div class="section-title">Mention Letter Details</div>
+                    
+                    <div class="form-group">
+                        <label for="mentionDate">Mention Date*</label>
+                        <input type="date" id="mentionDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mentionTime">Mention Time*</label>
+                        <input type="time" id="mentionTime" value="09:30" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mentionOutcome">Expected Outcome*</label>
+                        <select id="mentionOutcome" required>
+                            <option value="">Select Expected Outcome</option>
+                            <option value="Adjournment">Adjournment</option>
+                            <option value="Brief service">Brief service</option>
+                            <option value="Negotiations">Negotiations</option>
+                            <option value="Plea of guilty">Plea of guilty</option>
+                            <option value="Plea of not guilty">Plea of not guilty</option>
+                            <option value="Sentence">Sentence</option>
+                            <option value="Set for hearing">Set for hearing</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="briefServed">Brief Served?</label>
+                        <select id="briefServed">
+                            <option value="">Select</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                            <option value="Partial">Partial</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="negotiationsUpdate">Negotiations Update</label>
+                        <textarea id="negotiationsUpdate" placeholder="Any updates on negotiations with prosecution"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="clientAttendance">Client Required to Attend?*</label>
+                        <select id="clientAttendance" required>
+                            <option value="">Select</option>
+                            <option value="Yes">Yes - mandatory</option>
+                            <option value="No">No - excused</option>
+                            <option value="Preferred">Preferred but not mandatory</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="documentsRequired">Documents to Bring</label>
+                        <textarea id="documentsRequired" placeholder="List any documents the client should bring"></textarea>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getFinalFields() {
+            return `
+                <div class="section">
+                    <div class="section-title">Final Letter Details</div>
+                    
+                    <div class="form-group">
+                        <label for="finalOutcome">Case Outcome*</label>
+                        <select id="finalOutcome" onchange="checkPenaltyType()" required>
+                            <option value="">Select Outcome</option>
+                            <option value="Not Guilty">Not Guilty</option>
+                            <option value="Charges dismissed">Charges dismissed</option>
+                            <option value="Section 10 dismissal">Section 10 dismissal</option>
+                            <option value="CRO without conviction">CRO without conviction</option>
+                            <option value="CRO with conviction">CRO with conviction</option>
+                            <option value="Fine only">Fine only</option>
+                            <option value="CCO">Community Correction Order</option>
+                            <option value="ICO">Intensive Correction Order</option>
+                            <option value="Suspended sentence">Suspended sentence</option>
+                            <option value="Full time custody">Full time custody</option>
+                        </select>
+                    </div>
+                    
+                    <div class="conditional" id="penaltyDetails">
+                        <div class="form-group">
+                            <label for="penaltyLength">Penalty Length</label>
+                            <input type="text" id="penaltyLength" placeholder="e.g., 12 months, $1500">
+                        </div>
+                        
+                        <div class="form-group" id="conditionsField" style="display: none;">
+                            <label for="conditions">Conditions</label>
+                            <textarea id="conditions" placeholder="List any conditions imposed"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="criminalRecord">Criminal Record Impact</label>
+                        <select id="criminalRecord">
+                            <option value="">Select</option>
+                            <option value="No conviction recorded">No conviction recorded</option>
+                            <option value="Conviction recorded">Conviction recorded</option>
+                            <option value="Spent conviction">Will become spent conviction</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="appealDeadline">Appeal Deadline</label>
+                        <input type="date" id="appealDeadline">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="costsOrder">Costs Order</label>
+                        <select id="costsOrder">
+                            <option value="">Select</option>
+                            <option value="No costs">No costs order</option>
+                            <option value="Pay prosecution costs">Pay prosecution costs</option>
+                            <option value="Costs dismissed">Professional costs dismissed</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="finalBill">Final Bill Amount ($)</label>
+                        <input type="number" id="finalBill" placeholder="Total legal costs">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="outstandingAmount">Outstanding Amount ($)</label>
+                        <input type="number" id="outstandingAmount" placeholder="Amount still owed">
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getFeeReestimateFields() {
+            return `
+                <div class="section">
+                    <div class="section-title">Fee Re-estimate Details</div>
+                    
+                    <div class="form-group">
+                        <label for="originalEstimate">Original Estimate ($)*</label>
+                        <input type="number" id="originalEstimate" placeholder="e.g., 3500" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="workCompleted">Work Completed to Date ($)*</label>
+                        <input type="number" id="workCompleted" placeholder="e.g., 2500" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="revisedEstimate">Revised Total Estimate ($)*</label>
+                        <input type="number" id="revisedEstimate" placeholder="e.g., 5500" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reasonForIncrease">Reason for Increase*</label>
+                        <textarea id="reasonForIncrease" required placeholder="Explain why costs have increased"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="additionalWork">Additional Work Required*</label>
+                        <textarea id="additionalWork" required placeholder="Describe additional work needed"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="paymentRequired">Additional Payment Required ($)</label>
+                        <input type="number" id="paymentRequired" placeholder="Amount needed to continue">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="paymentDue">Payment Due Date</label>
+                        <input type="date" id="paymentDue">
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Toggle functions for form interactions
+        function toggleLegalAidFields() {
+            const legalAid = document.getElementById('legalAidStatus');
+            if (!legalAid) return;
+            
+            const legalAidValue = legalAid.value;
+            const legalAidDetails = document.getElementById('legalAidDetails');
+            const privateDetails = document.getElementById('privateDetails');
+            
+            if (legalAidDetails) legalAidDetails.style.display = legalAidValue === 'Yes' ? 'block' : 'none';
+            if (privateDetails) privateDetails.style.display = legalAidValue === 'No' ? 'block' : 'none';
+        }
+        
+        function toggleDepositAmount() {
+            const depositPaid = document.getElementById('depositPaid');
+            const depositDetails = document.getElementById('depositDetails');
+            if (depositPaid && depositDetails) {
+                depositDetails.style.display = depositPaid.value === 'Yes' ? 'block' : 'none';
+            }
+        }
+        
+        function togglePleaOptions() {
+            const plea = document.getElementById('plea');
+            const materials = document.getElementById('sentenceMaterials');
+            if (plea && materials) {
+                materials.style.display = plea.value === 'Guilty' ? 'block' : 'none';
+            }
+        }
+        
+        function checkPenaltyType() {
+            const outcome = document.getElementById('finalOutcome');
+            const details = document.getElementById('penaltyDetails');
+            const conditions = document.getElementById('conditionsField');
+            
+            if (!outcome) return;
+            
+            const outcomeValue = outcome.value;
+            if (details) {
+                if (outcomeValue && outcomeValue !== 'Not Guilty' && outcomeValue !== 'Charges dismissed') {
+                    details.style.display = 'block';
+                    if (conditions) {
+                        conditions.style.display = (outcomeValue.includes('CRO') || outcomeValue.includes('CCO') || outcomeValue.includes('ICO')) ? 'block' : 'none';
+                    }
+                } else {
+                    details.style.display = 'none';
+                }
+            }
+        }
+        
+        // ===================================================================
+        // INITIALIZATION
+        // ===================================================================
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSavedData();
+            updateUI();
+        });
+        
+        // Click outside modal to close
+        window.onclick = function(event) {
+            const modal = document.getElementById('addClientModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
     </script>
+    
     <style>
+        /* Your existing styles here - keeping them as is */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
@@ -1133,36 +1798,6 @@
             margin-bottom: 15px;
         }
         
-        .charges-section {
-            background: #f9fafb;
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 12px;
-        }
-        
-        .charges-category {
-            margin-bottom: 20px;
-        }
-        
-        .charges-category h4 {
-            color: #374151;
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-        
-        .multi-select {
-            min-height: 120px;
-        }
-        
-        .conditional {
-            display: none;
-            margin-top: 15px;
-            padding: 15px;
-            background-color: #f0f8ff;
-            border-radius: 8px;
-            border: 1px solid #e0e7ff;
-        }
-        
         .database-status {
             padding: 10px;
             margin-bottom: 20px;
@@ -1278,267 +1913,34 @@
             color: #92400e;
         }
         
-        @media (max-width: 768px) {
-            .checkbox-group {
-                grid-template-columns: 1fr;
-            }
-            
-            .tabs {
-                flex-wrap: wrap;
-            }
+        .charges-section {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 12px;
         }
         
-        /* Mobile-specific styles for iPhone */
-        @media (max-width: 430px) {
-            body {
-                padding: 10px;
-                font-size: 16px;
-            }
-            
-            .container {
-                padding: 0;
-            }
-            
-            .header {
-                padding: 20px;
-                margin-bottom: 20px;
-            }
-            
-            .header h1 {
-                font-size: 24px;
-            }
-            
-            .header p {
-                font-size: 14px;
-            }
-            
-            /* Tab navigation - make it a dropdown on mobile */
-            .tabs {
-                display: block;
-                position: relative;
-                background: transparent;
-                padding: 0;
-                box-shadow: none;
-            }
-            
-            .tab {
-                display: block;
-                width: 100%;
-                padding: 15px;
-                margin-bottom: 2px;
-                border-radius: 8px;
-                font-size: 16px;
-                text-align: left;
-            }
-            
-            /* Larger form elements */
-            .form-group input,
-            .form-group select,
-            .form-group textarea {
-                font-size: 16px;
-                padding: 15px;
-                border-radius: 8px;
-            }
-            
-            .form-group label {
-                font-size: 16px;
-                margin-bottom: 10px;
-            }
-            
-            /* Checkboxes - make them larger and easier to tap */
-            .checkbox-item {
-                padding: 15px;
-                margin-bottom: 8px;
-                border-radius: 8px;
-                font-size: 16px;
-            }
-            
-            .checkbox-item input[type="checkbox"],
-            .checkbox-item input[type="radio"] {
-                width: 20px;
-                height: 20px;
-                margin-right: 12px;
-            }
-            
-            /* Buttons - full width and larger */
-            .btn {
-                width: 100%;
-                padding: 16px;
-                font-size: 16px;
-                margin-bottom: 10px;
-                margin-right: 0;
-            }
-            
-            .button-group {
-                flex-direction: column;
-                gap: 0;
-            }
-            
-            /* Table adjustments */
-            .master-table {
-                font-size: 12px;
-                display: block;
-                overflow-x: auto;
-            }
-            
-            .master-table th,
-            .master-table td {
-                padding: 8px 4px;
-                font-size: 12px;
-            }
-            
-            /* Hide some columns on mobile */
-            .master-table th:nth-child(4),
-            .master-table td:nth-child(4),
-            .master-table th:nth-child(5),
-            .master-table td:nth-child(5) {
-                display: none;
-            }
-            
-            /* Section spacing */
-            .section {
-                margin-top: 20px;
-                padding-top: 20px;
-            }
-            
-            .section-title {
-                font-size: 20px;
-                margin-bottom: 15px;
-            }
-            
-            /* Output box */
-            .output-box {
-                font-size: 14px;
-                padding: 15px;
-                max-height: 300px;
-            }
-            
-            /* Charges section - stack vertically */
-            .charges-category {
-                margin-bottom: 15px;
-            }
-            
-            .charges-category h4 {
-                font-size: 18px;
-                margin-bottom: 12px;
-            }
-            
-            /* Info grid - single column on mobile */
-            .info-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-            
-            /* Modal adjustments */
-            .modal-content {
-                width: 95%;
-                padding: 20px;
-                margin: 20px auto;
-            }
-            
-            /* Add client button - fixed position */
-            .add-client-btn {
-                bottom: 20px;
-                right: 20px;
-                width: 56px;
-                height: 56px;
-                font-size: 28px;
-            }
-            
-            /* Multi-select - make taller */
-            .multi-select {
-                min-height: 150px;
-                font-size: 16px;
-            }
-            
-            /* Client info box */
-            .client-info {
-                padding: 15px;
-                margin-bottom: 15px;
-            }
-            
-            .client-info h3 {
-                font-size: 18px;
-            }
-            
-            /* Letter history */
-            .letter-history {
-                padding: 15px;
-                margin-top: 15px;
-            }
-            
-            /* Conditional sections */
-            .conditional {
-                margin-top: 10px;
-                padding: 12px;
-            }
-            
-            /* Analytics grid */
-            #analytics .tab-content > div:first-child {
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-            
-            #analytics .tab-content > div:first-child > div {
-                padding: 15px;
-            }
-            
-            #analytics .tab-content > div:first-child h3 {
-                font-size: 14px;
-            }
-            
-            #analytics .tab-content > div:first-child p {
-                font-size: 1.5em;
-            }
-            
-            /* Database status */
-            .database-status {
-                font-size: 14px;
-                padding: 12px;
-                margin-bottom: 15px;
-            }
-            
-            /* Remove hover effects on mobile */
-            .checkbox-item:hover {
-                border-color: #e5e7eb;
-                background: transparent;
-            }
-            
-            /* Tab content padding */
-            .tab-content {
-                padding: 20px;
-                border-radius: 12px;
-            }
-            
-            /* Sticky action buttons at bottom */
-            #generator .btn-primary,
-            #generator .btn-success {
-                position: fixed;
-                bottom: 20px;
-                width: calc(50% - 25px);
-                z-index: 100;
-            }
-            
-            #generator .btn-primary {
-                left: 20px;
-            }
-            
-            #generator .btn-success {
-                right: 20px;
-            }
-            
-            #generator > div:last-child {
-                padding-bottom: 80px;
-            }
-            
-            /* Zapier status */
-            #zapierStatus {
-                position: fixed;
-                bottom: 80px;
-                left: 20px;
-                right: 20px;
-                z-index: 99;
-            }
+        .charges-category {
+            margin-bottom: 20px;
+        }
+        
+        .charges-category h4 {
+            color: #374151;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .multi-select {
+            min-height: 120px;
+        }
+        
+        .conditional {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f0f8ff;
+            border-radius: 8px;
+            border: 1px solid #e0e7ff;
         }
     </style>
 </head>
@@ -1650,6 +2052,10 @@
                     
                     <div id="cdrFieldsInLetter" style="display: none; margin-top: 15px;">
                         <h4>CDR Details (will auto-populate from letter data)</h4>
+                        <div class="form-group">
+                            <label for="nextCourtDate">Next Court Date:</label>
+                            <input type="date" id="nextCourtDate">
+                        </div>
                         <div class="form-group">
                             <label for="letterCDRReason">CDR Reason:</label>
                             <select id="letterCDRReason">
@@ -1986,848 +2392,5 @@
     </div>
     
     <button class="add-client-btn" onclick="openModal()" title="Add New Client">+</button>
-    
-    <script>
-        // Rest of the functions that need DOM to be loaded
-        
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadSavedData();
-            updateUI();
-        });
-        
-        // Save data to localStorage
-        function saveData() {
-            localStorage.setItem('legalClients', JSON.stringify(clients));
-        }
-        
-        // Update database status indicator
-        function updateDatabaseStatus(connected) {
-            const status = document.getElementById('databaseStatus');
-            if (status) {
-                if (connected) {
-                    status.textContent = `Database: Connected (${clients.length} clients)`;
-                    status.className = 'database-status status-connected';
-                } else {
-                    status.textContent = 'Database: Not Connected';
-                    status.className = 'database-status status-disconnected';
-                }
-            }
-        }
-        
-        // Update all UI elements
-        function updateUI() {
-            loadClientTable();
-            loadClientSelect();
-            loadCDRClientSelect();
-            updateAnalytics();
-        }
-        
-        // Load client table
-        function loadClientTable() {
-            const tbody = document.getElementById('clientTableBody');
-            
-            if (!tbody) return;
-            
-            if (clients.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
-                            No clients loaded. Please upload an Excel database or add clients manually.
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            tbody.innerHTML = clients.map(client => `
-                <tr>
-                    <td><strong>${client.name}</strong></td>
-                    <td>${client.matterNumber}</td>
-                    <td>${client.court}</td>
-                    <td>${client.charges}</td>
-                    <td><span class="status-badge status-${client.status.toLowerCase()}">${client.status}</span></td>
-                    <td>${client.ccl ? '✅' : '❌'}</td>
-                    <td>${client.mention ? '✅' : '❌'}</td>
-                    <td>${client.final ? '✅' : '❌'}</td>
-                    <td>${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</td>
-                    <td>
-                        <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="selectClientForLetter(${client.id})">Generate Letter</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-        
-        // Load client select dropdown
-        function loadClientSelect() {
-            const select = document.getElementById('clientSelect');
-            if (!select) return;
-            
-            select.innerHTML = '<option value="">-- Select a Client --</option>';
-            
-            clients.forEach(client => {
-                const option = document.createElement('option');
-                option.value = client.id;
-                option.textContent = `${client.name} (${client.matterNumber})`;
-                select.appendChild(option);
-            });
-        }
-        
-        // Load CDR client select dropdown
-        function loadCDRClientSelect() {
-            const select = document.getElementById('cdrClientSelect');
-            if (!select) return;
-            
-            select.innerHTML = '<option value="">-- Manual Entry --</option>';
-            
-            clients.forEach(client => {
-                const option = document.createElement('option');
-                option.value = client.id;
-                option.textContent = `${client.name} (${client.matterNumber})`;
-                select.appendChild(option);
-            });
-        }
-        
-        // Update analytics
-        function updateAnalytics() {
-            const totalMattersEl = document.getElementById('totalMatters');
-            const activeMattersEl = document.getElementById('activeMatters');
-            const pendingLettersEl = document.getElementById('pendingLetters');
-            const upcomingCourtEl = document.getElementById('upcomingCourt');
-            
-            if (totalMattersEl) totalMattersEl.textContent = clients.length;
-            if (activeMattersEl) activeMattersEl.textContent = clients.filter(c => c.status === 'Active').length;
-            
-            // Count pending letters (clients without CCL)
-            const pendingLetters = clients.filter(c => !c.ccl).length;
-            if (pendingLettersEl) pendingLettersEl.textContent = pendingLetters;
-            
-            // Count upcoming court dates (next 7 days)
-            const nextWeek = new Date();
-            nextWeek.setDate(nextWeek.getDate() + 7);
-            const upcoming = clients.filter(c => {
-                if (!c.nextCourt) return false;
-                const courtDate = new Date(c.nextCourt);
-                return courtDate <= nextWeek && courtDate >= new Date();
-            }).length;
-            if (upcomingCourtEl) upcomingCourtEl.textContent = upcoming;
-            
-            // Court breakdown
-            const courtBreakdown = {};
-            clients.forEach(c => {
-                courtBreakdown[c.court] = (courtBreakdown[c.court] || 0) + 1;
-            });
-            
-            const courtDiv = document.getElementById('courtBreakdown');
-            if (courtDiv) {
-                courtDiv.innerHTML = Object.entries(courtBreakdown)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([court, count]) => `
-                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                            <span>${court}</span>
-                            <strong>${count}</strong>
-                        </div>
-                    `).join('') || '<p style="color: #6b7280;">No data available</p>';
-            }
-            
-            // Letter status chart
-            const statusDiv = document.getElementById('letterStatusChart');
-            if (statusDiv) {
-                const cclSent = clients.filter(c => c.ccl).length;
-                const mentionSent = clients.filter(c => c.mention).length;
-                const finalSent = clients.filter(c => c.final).length;
-                
-                statusDiv.innerHTML = `
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-                        <div style="text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #3b82f6;">${cclSent}</div>
-                            <div>CCL Sent</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #16a34a;">${mentionSent}</div>
-                            <div>Mention Letters</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #dc2626;">${finalSent}</div>
-                            <div>Final Letters</div>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-        
-        // Toggle functions for CCL form
-        function toggleLegalAidFields() {
-            const legalAid = document.getElementById('legalAidStatus');
-            if (!legalAid) return;
-            
-            const legalAidValue = legalAid.value;
-            const legalAidDetails = document.getElementById('legalAidDetails');
-            const privateDetails = document.getElementById('privateDetails');
-            
-            if (legalAidDetails) legalAidDetails.style.display = legalAidValue === 'Yes' ? 'block' : 'none';
-            if (privateDetails) privateDetails.style.display = legalAidValue === 'No' ? 'block' : 'none';
-        }
-        
-        function toggleDepositAmount() {
-            const depositPaid = document.getElementById('depositPaid');
-            const depositDetails = document.getElementById('depositDetails');
-            if (depositPaid && depositDetails) {
-                depositDetails.style.display = depositPaid.value === 'Yes' ? 'block' : 'none';
-            }
-        }
-        
-        function togglePleaOptions() {
-            const plea = document.getElementById('plea');
-            const materials = document.getElementById('sentenceMaterials');
-            if (plea && materials) {
-                materials.style.display = plea.value === 'Guilty' ? 'block' : 'none';
-            }
-        }
-        
-        function toggleADVOFields() {
-            const advoType = document.getElementById('advoType');
-            const advoDetails = document.getElementById('advoDetails');
-            if (advoType && advoDetails) {
-                advoDetails.style.display = advoType.value ? 'block' : 'none';
-            }
-        }
-        
-        function toggleBailFields() {
-            const hasBail = document.getElementById('hasBail');
-            const bailDetails = document.getElementById('bailDetails');
-            if (hasBail && bailDetails) {
-                bailDetails.style.display = hasBail.value === 'Yes' ? 'block' : 'none';
-            }
-        }
-        
-        function toggleFinalADVO() {
-            const finalADVO = document.getElementById('finalADVO');
-            const finalADVODetails = document.getElementById('finalADVODetails');
-            if (finalADVO && finalADVODetails) {
-                finalADVODetails.style.display = finalADVO.value === 'Yes' ? 'block' : 'none';
-            }
-        }
-        
-        function checkPenaltyType() {
-            const penalty = document.getElementById('penalty');
-            const details = document.getElementById('penaltyDetails');
-            const conditions = document.getElementById('conditionsField');
-            
-            if (!penalty) return;
-            
-            const penaltyValue = penalty.value;
-            if (details) {
-                if (penaltyValue && penaltyValue !== 'Not Guilty' && penaltyValue !== 'Charges dismissed') {
-                    details.style.display = 'block';
-                    if (conditions) {
-                        conditions.style.display = (penaltyValue.includes('CRO') || penaltyValue.includes('CCO') || penaltyValue.includes('ICO')) ? 'block' : 'none';
-                    }
-                } else {
-                    details.style.display = 'none';
-                }
-            }
-        }
-        
-        // Save data to localStorage
-        function saveData() {
-            localStorage.setItem('legalClients', JSON.stringify(clients));
-        }
-        
-        // Update all UI elements
-        function updateUI() {
-            loadClientTable();
-            loadClientSelect();
-            loadCDRClientSelect();
-            updateAnalytics();
-        }
-        
-        // Update database status indicator
-        function updateDatabaseStatus(connected) {
-            const status = document.getElementById('databaseStatus');
-            if (connected) {
-                status.textContent = `Database: Connected (${clients.length} clients)`;
-                status.className = 'database-status status-connected';
-            } else {
-                status.textContent = 'Database: Not Connected';
-                status.className = 'database-status status-disconnected';
-            }
-        }
-        
-        // Load client table
-        function loadClientTable() {
-            const tbody = document.getElementById('clientTableBody');
-            
-            if (clients.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
-                            No clients loaded. Please upload an Excel database or add clients manually.
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            tbody.innerHTML = clients.map(client => `
-                <tr>
-                    <td><strong>${client.name}</strong></td>
-                    <td>${client.matterNumber}</td>
-                    <td>${client.court}</td>
-                    <td>${client.charges}</td>
-                    <td><span class="status-badge status-${client.status.toLowerCase()}">${client.status}</span></td>
-                    <td>${client.ccl ? '✅' : '❌'}</td>
-                    <td>${client.mention ? '✅' : '❌'}</td>
-                    <td>${client.final ? '✅' : '❌'}</td>
-                    <td>${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</td>
-                    <td>
-                        <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="selectClientForLetter(${client.id})">Generate Letter</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-        
-        // Load client select dropdown
-        function loadClientSelect() {
-            const select = document.getElementById('clientSelect');
-            select.innerHTML = '<option value="">-- Select a Client --</option>';
-            
-            clients.forEach(client => {
-                const option = document.createElement('option');
-                option.value = client.id;
-                option.textContent = `${client.name} (${client.matterNumber})`;
-                select.appendChild(option);
-            });
-        }
-        
-        // Load CDR client select dropdown
-        function loadCDRClientSelect() {
-            const select = document.getElementById('cdrClientSelect');
-            select.innerHTML = '<option value="">-- Manual Entry --</option>';
-            
-            clients.forEach(client => {
-                const option = document.createElement('option');
-                option.value = client.id;
-                option.textContent = `${client.name} (${client.matterNumber})`;
-                select.appendChild(option);
-            });
-        }
-        
-        // Load CDR client info
-        function loadCDRClientInfo() {
-            const clientId = parseInt(document.getElementById('cdrClientSelect').value);
-            
-            if (!clientId) {
-                // Clear fields for manual entry
-                document.getElementById('cdrClientName').value = '';
-                document.getElementById('cdrFileNumber').value = '';
-                document.getElementById('cdrCourt').value = '';
-                document.getElementById('cdrOutcomeCourt').value = '';
-                return;
-            }
-            
-            const client = clients.find(c => c.id === clientId);
-            if (!client) return;
-            
-            // Populate CDR fields
-            document.getElementById('cdrClientName').value = client.name;
-            document.getElementById('cdrFileNumber').value = client.matterNumber;
-            document.getElementById('cdrCourt').value = client.court;
-            document.getElementById('cdrOutcomeCourt').value = client.court;
-            
-            // If client has next court date, populate that too
-            if (client.nextCourt) {
-                document.getElementById('cdrCourtDate').value = client.nextCourt;
-            }
-        }
-        
-        // Toggle CDR fields in letter generation
-        function toggleCDRFields() {
-            const isChecked = document.getElementById('generateCDRWithLetter').checked;
-            document.getElementById('cdrFieldsInLetter').style.display = isChecked ? 'block' : 'none';
-        }
-        
-        // Select client from master list for letter generation
-        function selectClientForLetter(clientId) {
-            // Find the generator tab button and trigger click
-            const generatorTab = document.querySelector('.tab:nth-child(2)');
-            if (generatorTab) {
-                generatorTab.click();
-            }
-            document.getElementById('clientSelect').value = clientId;
-            loadClientInfo();
-        }
-        
-        // Load client information
-        function loadClientInfo() {
-            const clientId = parseInt(document.getElementById('clientSelect').value);
-            const clientInfoSection = document.getElementById('clientInfoSection');
-            
-            if (!clientId) {
-                clientInfoSection.style.display = 'none';
-                return;
-            }
-            
-            currentClient = clients.find(c => c.id === clientId);
-            if (!currentClient) return;
-            
-            clientInfoSection.style.display = 'block';
-            
-            // Populate client info grid
-            document.getElementById('clientInfoGrid').innerHTML = `
-                <div class="info-item">
-                    <div class="info-label">Client Name</div>
-                    <div class="info-value">${currentClient.name}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Address</div>
-                    <div class="info-value">${currentClient.address || 'Not provided'}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Matter Number</div>
-                    <div class="info-value">${currentClient.matterNumber}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Court</div>
-                    <div class="info-value">${currentClient.court}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Matter Type</div>
-                    <div class="info-value">${currentClient.matterType}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Charges</div>
-                    <div class="info-value">${currentClient.charges}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Legal Aid</div>
-                    <div class="info-value">${currentClient.legalAid ? 'Yes' : 'No'}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Next Court</div>
-                    <div class="info-value">${currentClient.nextCourt ? formatDate(currentClient.nextCourt) : 'TBD'}</div>
-                </div>
-            `;
-            
-            // Populate letter history
-            const historyList = document.getElementById('letterHistoryList');
-            if (currentClient.letterHistory && currentClient.letterHistory.length > 0) {
-                historyList.innerHTML = currentClient.letterHistory.map(letter => `
-                    <div class="letter-item">
-                        <div>
-                            <strong>${letter.type}</strong> - ${formatDate(letter.date)}
-                            <br><small>${letter.notes || ''}</small>
-                        </div>
-                        <span class="status-badge status-completed">Sent</span>
-                    </div>
-                `).join('');
-            } else {
-                historyList.innerHTML = '<p style="color: #6b7280; font-style: italic;">No letters sent yet</p>';
-            }
-        }
-        
-        // Update letter fields based on type
-        function updateLetterFields() {
-            const letterType = document.getElementById('letterType').value;
-            const dynamicFields = document.getElementById('dynamicFields');
-            const cdrSection = document.getElementById('cdrForLetterSection');
-            
-            if (!letterType || !currentClient) {
-                dynamicFields.innerHTML = '';
-                cdrSection.style.display = 'none';
-                return;
-            }
-            
-            // Show CDR section for all letter types
-            cdrSection.style.display = 'block';
-            
-            let fieldsHTML = '';
-            
-            switch(letterType) {
-                case 'CCL':
-                    fieldsHTML = getCCLFields();
-                    break;
-                case 'Mention':
-                    fieldsHTML = getMentionFields();
-                    break;
-                case 'Final':
-                    fieldsHTML = getFinalFields();
-                    break;
-                case 'FeeReestimate':
-                    fieldsHTML = getFeeReestimateFields();
-                    break;
-            }
-            
-            dynamicFields.innerHTML = fieldsHTML;
-            
-            // Initialize any conditional logic
-            if (letterType === 'CCL') {
-                toggleLegalAidFields();
-                togglePleaOptions();
-            }
-        }
-        
-        // Get CCL specific fields
-        // Get CCL specific fields
-        function getCCLFields() {
-            return `
-                <div class="section">
-                    <div class="section-title">Contact Details</div>
-                    
-                    <div class="form-group">
-                        <label for="contactMethod">Contact Method*</label>
-                        <select id="contactMethod" required>
-                            <option value="">Select Contact Method</option>
-                            <option value="Office attendance">Office attendance</option>
-                            <option value="Phone call">Phone call</option>
-                            <option value="Email">Email</option>
-                            <option value="Police station">Police station</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="contactDate">Contact Date*</label>
-                        <input type="date" id="contactDate" value="${getTodayDate()}" required>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <div class="section-title">Charges</div>
-                    
-                    <div class="charges-section">
-                        <div class="charges-category">
-                            <h4>Violence Offences</h4>
-                            <div class="checkbox-group">
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_affray" value="Affray - s93C Crimes Act">
-                                    <label for="charge_affray">Affray - s93C Crimes Act</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_assault" value="Common Assault - s61 Crimes Act">
-                                    <label for="charge_assault">Common Assault - s61 Crimes Act</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_abh" value="Assault occasioning ABH - s59 Crimes Act">
-                                    <label for="charge_abh">Assault occasioning ABH - s59</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_assault_police" value="Assault Police - s60 Crimes Act">
-                                    <label for="charge_assault_police">Assault Police - s60 Crimes Act</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_resist" value="Resist Officer - s58 Crimes Act">
-                                    <label for="charge_resist">Resist Officer - s58 Crimes Act</label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="charges-category">
-                            <h4>Domestic Violence</h4>
-                            <div class="checkbox-group">
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_breach_avo" value="Breach AVO - s14 CDPV Act">
-                                    <label for="charge_breach_avo">Breach AVO - s14 CDPV Act</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_stalk" value="Stalk/Intimidate - s13 CDPV Act">
-                                    <label for="charge_stalk">Stalk/Intimidate - s13 CDPV Act</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_destroy" value="Destroy/Damage Property - s195 Crimes Act">
-                                    <label for="charge_destroy">Destroy/Damage Property - s195</label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="charges-category">
-                            <h4>Traffic Offences</h4>
-                            <div class="checkbox-group">
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_low_pca" value="Low Range PCA - s110(3) Road Transport Act">
-                                    <label for="charge_low_pca">Low Range PCA - s110(3)</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_mid_pca" value="Mid Range PCA - s110(4) Road Transport Act">
-                                    <label for="charge_mid_pca">Mid Range PCA - s110(4)</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_high_pca" value="High Range PCA - s110(5) Road Transport Act">
-                                    <label for="charge_high_pca">High Range PCA - s110(5)</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_disqualified" value="Drive whilst disqualified - s54(1) Road Transport Act">
-                                    <label for="charge_disqualified">Drive whilst disqualified - s54(1)</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_suspended" value="Drive whilst suspended - s54(1) Road Transport Act">
-                                    <label for="charge_suspended">Drive whilst suspended - s54(1)</label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="charges-category">
-                            <h4>Drug Offences</h4>
-                            <div class="checkbox-group">
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_possess" value="Possess Prohibited Drug - s10 DMTA">
-                                    <label for="charge_possess">Possess Prohibited Drug - s10</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_supply" value="Supply Prohibited Drug - s25 DMTA">
-                                    <label for="charge_supply">Supply Prohibited Drug - s25</label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="charges-category">
-                            <h4>Property Offences</h4>
-                            <div class="checkbox-group">
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_larceny" value="Larceny - s117 Crimes Act">
-                                    <label for="charge_larceny">Larceny - s117 Crimes Act</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="charge_goods" value="Goods in Custody - s527C Crimes Act">
-                                    <label for="charge_goods">Goods in Custody - s527C</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="additionalCharges">Additional Charges</label>
-                        <input type="text" id="additionalCharges" placeholder="Enter any additional charges">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="counts">Number of Counts</label>
-                        <input type="number" id="counts" min="1" placeholder="e.g., 3">
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <div class="section-title">Legal Aid & Fees</div>
-                    
-                    <div class="form-group">
-                        <label for="legalAidStatus">Legal Aid?*</label>
-                        <select id="legalAidStatus" onchange="toggleLegalAidFields()" required>
-                            <option value="">Select</option>
-                            <option value="Yes" ${currentClient.legalAid ? 'selected' : ''}>Yes</option>
-                            <option value="No" ${!currentClient.legalAid ? 'selected' : ''}>No</option>
-                        </select>
-                    </div>
-                    
-                    <div class="conditional" id="legalAidDetails">
-                        <div class="form-group">
-                            <label for="contribution">Contribution Amount ($)</label>
-                            <input type="number" id="contribution" placeholder="Leave blank if no contribution">
-                        </div>
-                    </div>
-                    
-                    <div class="conditional" id="privateDetails">
-                        <div class="form-group">
-                            <label for="estimate">Estimate Amount ($)*</label>
-                            <input type="number" id="estimate" placeholder="e.g., 3500">
-                        </div>
-                        <div class="form-group">
-                            <label for="depositPaid">Deposit Paid?</label>
-                            <select id="depositPaid" onchange="toggleDepositAmount()">
-                                <option value="No">No</option>
-                                <option value="Yes">Yes</option>
-                            </select>
-                        </div>
-                        <div class="conditional" id="depositDetails">
-                            <div class="form-group">
-                                <label for="depositAmount">Deposit Amount ($)</label>
-                                <input type="number" id="depositAmount" placeholder="e.g., 1000">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <div class="section-title">Instructions</div>
-                    
-                    <div class="form-group">
-                        <label for="plea">Plea*</label>
-                        <select id="plea" onchange="togglePleaOptions()" required>
-                            <option value="">Select Plea</option>
-                            <option value="Guilty">Guilty</option>
-                            <option value="Not Guilty">Not Guilty</option>
-                            ${currentClient.matterType === 'Criminal - Indictable' ? '<option value="No plea yet (indictable)">No plea yet (indictable)</option>' : ''}
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="clientInstructions">Client Instructions*</label>
-                        <textarea id="clientInstructions" placeholder="What are the client's instructions moving forward?" required></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="nextCourtDate">Next Court Date</label>
-                        <input type="date" id="nextCourtDate" value="${currentClient.nextCourt || ''}">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="requiredAttend">Client Required to Attend?</label>
-                        <select id="requiredAttend">
-                            <option value="">Select</option>
-                            <option value="Yes">Yes</option>
-                            <option value="No">No</option>
-                        </select>
-                    </div>
-                    
-                    <div class="conditional" id="sentenceMaterials">
-                        <label>Sentence Materials Discussed</label>
-                        <div class="checkbox-group">
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="mat_references" value="Character references">
-                                <label for="mat_references">Character references</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="mat_psych_existing" value="Psych report - existing doctor">
-                                <label for="mat_psych_existing">Psych report - existing doctor</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="mat_psych_referral" value="Psych report - need referral">
-                                <label for="mat_psych_referral">Psych report - need referral</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="mat_traffic" value="Traffic Offenders Program">
-                                <label for="mat_traffic">Traffic Offenders Program</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="mat_treatment" value="Drug/Alcohol treatment">
-                                <label for="mat_treatment">Drug/Alcohol treatment</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="mat_other" value="Other treatment proof">
-                                <label for="mat_other">Other treatment proof</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <div class="section-title">ADVO Details</div>
-                    
-                    <div class="form-group">
-                        <label for="advoType">ADVO Type</label>
-                        <select id="advoType" onchange="toggleADVOFields()">
-                            <option value="">No ADVO</option>
-                            <option value="Provisional">Provisional</option>
-                            <option value="Interim">Interim</option>
-                            <option value="Final">Final</option>
-                        </select>
-                    </div>
-                    
-                    <div class="conditional" id="advoDetails">
-                        <div class="form-group">
-                            <label for="pinop">PINOP Name*</label>
-                            <input type="text" id="pinop" placeholder="Protected person's name">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="advoDuration">Duration*</label>
-                            <select id="advoDuration">
-                                <option value="">Select Duration</option>
-                                <option value="6 months">6 months</option>
-                                <option value="12 months">12 months</option>
-                                <option value="2 years">2 years</option>
-                                <option value="5 years">5 years</option>
-                                <option value="Indefinite">Indefinite</option>
-                            </select>
-                        </div>
-                        
-                        <label>ADVO Conditions (1 is mandatory)</label>
-                        <div class="checkbox-group">
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="advo_2" value="2">
-                                <label for="advo_2">2 - No contact</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="advo_3" value="3">
-                                <label for="advo_3">3 - No approach schools/childcare</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="advo_4" value="4">
-                                <label for="advo_4">4 - No approach after alcohol/drugs</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="advo_5" value="5">
-                                <label for="advo_5">5 - Must not locate</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="advo_6" value="6">
-                                <label for="advo_6">6 - Contact through lawyer only</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="advo_7" value="7">
-                                <label for="advo_7">7 - Cannot live at same address</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="advo_8" value="8">
-                                <label for="advo_8">8 - Cannot go to residence/work</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="advo_9" value="9">
-                                <label for="advo_9">9 - Stay away specified metres</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="advo_10" value="10">
-                                <label for="advo_10">10 - No firearms/weapons</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="advo_11" value="11">
-                                <label for="advo_11">11 - Other conditions</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <div class="section-title">Bail Conditions</div>
-                    
-                    <div class="form-group">
-                        <label for="hasBail">Has Bail Conditions?</label>
-                        <select id="hasBail" onchange="toggleBailFields()">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                    
-                    <div class="conditional" id="bailDetails">
-                        <label>Select Bail Conditions</label>
-                        <select id="bailConditions" multiple class="multi-select">
-                            <option value="Reside at specified address">Reside at specified address</option>
-                            <option value="Report to police station daily">Report to police station daily</option>
-                            <option value="Report to police station Monday, Wednesday, Friday">Report Mon/Wed/Fri</option>
-                            <option value="Report to police station weekly">Report weekly</option>
-                            <option value="Not to contact specified person">Not to contact specified person</option>
-                            <option value="Not to contact prosecution witnesses">Not to contact witnesses</option>
-                            <option value="Not to go within specified metres">Not to go within X metres</option>
-                            <option value="Not to enter specified suburb">Not to enter suburb/location</option>
-                            <option value="Not to leave New South Wales">Not to leave NSW</option>
-                            <option value="Surrender passport">Surrender passport</option>
-                            <option value="Curfew">Curfew</option>
-                            <option value="Not to consume alcohol">Not to consume alcohol</option>
-                            <option value="Not to consume illicit drugs">Not to consume drugs</option>
-                            <option value="Not to enter licensed premises">Not to enter licensed premises</option>
-                            <option value="Not to drive a motor vehicle">Not to drive</option>
-                        </select>
-                        <small>Hold Ctrl (or Cmd on Mac) to select multiple</small>
-                        
-                        <div class="form-group" style="margin-top: 10px;">
-                            <label for="additionalBail">Additional Bail Conditions</label>
-                            <textarea id="additionalBail" placeholder="Any additional bail conditions"></textarea>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <div class="section-title">Additional Information</div>
-                    <div class="form-group">
-                        <label for="additionalInfo">Additional Information</label>
-                        <textarea id="additionalInfo" placeholder="Any other relevant information for this letter"></textarea>
-                    </div>
-                </div>
+</body>
+</html>
