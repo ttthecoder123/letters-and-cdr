@@ -1960,12 +1960,236 @@
             updateUI();
         });
         
-        // Load saved data from localStorage
-        function loadSavedData() {
-            const savedClients = localStorage.getItem('legalClients');
-            if (savedClients) {
-                clients = JSON.parse(savedClients);
-                updateDatabaseStatus(true);
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('legalClients', JSON.stringify(clients));
+        }
+        
+        // Update database status indicator
+        function updateDatabaseStatus(connected) {
+            const status = document.getElementById('databaseStatus');
+            if (status) {
+                if (connected) {
+                    status.textContent = `Database: Connected (${clients.length} clients)`;
+                    status.className = 'database-status status-connected';
+                } else {
+                    status.textContent = 'Database: Not Connected';
+                    status.className = 'database-status status-disconnected';
+                }
+            }
+        }
+        
+        // Update all UI elements
+        function updateUI() {
+            loadClientTable();
+            loadClientSelect();
+            loadCDRClientSelect();
+            updateAnalytics();
+        }
+        
+        // Load client table
+        function loadClientTable() {
+            const tbody = document.getElementById('clientTableBody');
+            
+            if (!tbody) return;
+            
+            if (clients.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
+                            No clients loaded. Please upload an Excel database or add clients manually.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = clients.map(client => `
+                <tr>
+                    <td><strong>${client.name}</strong></td>
+                    <td>${client.matterNumber}</td>
+                    <td>${client.court}</td>
+                    <td>${client.charges}</td>
+                    <td><span class="status-badge status-${client.status.toLowerCase()}">${client.status}</span></td>
+                    <td>${client.ccl ? '✅' : '❌'}</td>
+                    <td>${client.mention ? '✅' : '❌'}</td>
+                    <td>${client.final ? '✅' : '❌'}</td>
+                    <td>${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</td>
+                    <td>
+                        <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="selectClientForLetter(${client.id})">Generate Letter</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // Load client select dropdown
+        function loadClientSelect() {
+            const select = document.getElementById('clientSelect');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">-- Select a Client --</option>';
+            
+            clients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client.id;
+                option.textContent = `${client.name} (${client.matterNumber})`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Load CDR client select dropdown
+        function loadCDRClientSelect() {
+            const select = document.getElementById('cdrClientSelect');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">-- Manual Entry --</option>';
+            
+            clients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client.id;
+                option.textContent = `${client.name} (${client.matterNumber})`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Update analytics
+        function updateAnalytics() {
+            const totalMattersEl = document.getElementById('totalMatters');
+            const activeMattersEl = document.getElementById('activeMatters');
+            const pendingLettersEl = document.getElementById('pendingLetters');
+            const upcomingCourtEl = document.getElementById('upcomingCourt');
+            
+            if (totalMattersEl) totalMattersEl.textContent = clients.length;
+            if (activeMattersEl) activeMattersEl.textContent = clients.filter(c => c.status === 'Active').length;
+            
+            // Count pending letters (clients without CCL)
+            const pendingLetters = clients.filter(c => !c.ccl).length;
+            if (pendingLettersEl) pendingLettersEl.textContent = pendingLetters;
+            
+            // Count upcoming court dates (next 7 days)
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            const upcoming = clients.filter(c => {
+                if (!c.nextCourt) return false;
+                const courtDate = new Date(c.nextCourt);
+                return courtDate <= nextWeek && courtDate >= new Date();
+            }).length;
+            if (upcomingCourtEl) upcomingCourtEl.textContent = upcoming;
+            
+            // Court breakdown
+            const courtBreakdown = {};
+            clients.forEach(c => {
+                courtBreakdown[c.court] = (courtBreakdown[c.court] || 0) + 1;
+            });
+            
+            const courtDiv = document.getElementById('courtBreakdown');
+            if (courtDiv) {
+                courtDiv.innerHTML = Object.entries(courtBreakdown)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([court, count]) => `
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                            <span>${court}</span>
+                            <strong>${count}</strong>
+                        </div>
+                    `).join('') || '<p style="color: #6b7280;">No data available</p>';
+            }
+            
+            // Letter status chart
+            const statusDiv = document.getElementById('letterStatusChart');
+            if (statusDiv) {
+                const cclSent = clients.filter(c => c.ccl).length;
+                const mentionSent = clients.filter(c => c.mention).length;
+                const finalSent = clients.filter(c => c.final).length;
+                
+                statusDiv.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; font-weight: bold; color: #3b82f6;">${cclSent}</div>
+                            <div>CCL Sent</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; font-weight: bold; color: #16a34a;">${mentionSent}</div>
+                            <div>Mention Letters</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; font-weight: bold; color: #dc2626;">${finalSent}</div>
+                            <div>Final Letters</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Toggle functions for CCL form
+        function toggleLegalAidFields() {
+            const legalAid = document.getElementById('legalAidStatus');
+            if (!legalAid) return;
+            
+            const legalAidValue = legalAid.value;
+            const legalAidDetails = document.getElementById('legalAidDetails');
+            const privateDetails = document.getElementById('privateDetails');
+            
+            if (legalAidDetails) legalAidDetails.style.display = legalAidValue === 'Yes' ? 'block' : 'none';
+            if (privateDetails) privateDetails.style.display = legalAidValue === 'No' ? 'block' : 'none';
+        }
+        
+        function toggleDepositAmount() {
+            const depositPaid = document.getElementById('depositPaid');
+            const depositDetails = document.getElementById('depositDetails');
+            if (depositPaid && depositDetails) {
+                depositDetails.style.display = depositPaid.value === 'Yes' ? 'block' : 'none';
+            }
+        }
+        
+        function togglePleaOptions() {
+            const plea = document.getElementById('plea');
+            const materials = document.getElementById('sentenceMaterials');
+            if (plea && materials) {
+                materials.style.display = plea.value === 'Guilty' ? 'block' : 'none';
+            }
+        }
+        
+        function toggleADVOFields() {
+            const advoType = document.getElementById('advoType');
+            const advoDetails = document.getElementById('advoDetails');
+            if (advoType && advoDetails) {
+                advoDetails.style.display = advoType.value ? 'block' : 'none';
+            }
+        }
+        
+        function toggleBailFields() {
+            const hasBail = document.getElementById('hasBail');
+            const bailDetails = document.getElementById('bailDetails');
+            if (hasBail && bailDetails) {
+                bailDetails.style.display = hasBail.value === 'Yes' ? 'block' : 'none';
+            }
+        }
+        
+        function toggleFinalADVO() {
+            const finalADVO = document.getElementById('finalADVO');
+            const finalADVODetails = document.getElementById('finalADVODetails');
+            if (finalADVO && finalADVODetails) {
+                finalADVODetails.style.display = finalADVO.value === 'Yes' ? 'block' : 'none';
+            }
+        }
+        
+        function checkPenaltyType() {
+            const penalty = document.getElementById('penalty');
+            const details = document.getElementById('penaltyDetails');
+            const conditions = document.getElementById('conditionsField');
+            
+            if (!penalty) return;
+            
+            const penaltyValue = penalty.value;
+            if (details) {
+                if (penaltyValue && penaltyValue !== 'Not Guilty' && penaltyValue !== 'Charges dismissed') {
+                    details.style.display = 'block';
+                    if (conditions) {
+                        conditions.style.display = (penaltyValue.includes('CRO') || penaltyValue.includes('CCO') || penaltyValue.includes('ICO')) ? 'block' : 'none';
+                    }
+                } else {
+                    details.style.display = 'none';
+                }
             }
         }
         
@@ -2207,6 +2431,7 @@
             }
         }
         
+        // Get CCL specific fields
         // Get CCL specific fields
         function getCCLFields() {
             return `
