@@ -368,12 +368,23 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
             
             const hasCDR = isCDROnly || document.getElementById('generateCDRWithLetter')?.checked;
             
+            // Format today's date as "day month year" with month written out
+            const today = new Date();
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"];
+            const formattedDate = `${today.getDate()} ${monthNames[today.getMonth()]} ${today.getFullYear()}`;
+            
+            // Get selected prefix
+            const clientPrefix = document.getElementById('clientPrefix')?.value || '';
+            
             const payload = {
                 type: isCDROnly ? 'CDR_ONLY' : (hasCDR ? 'LETTER_AND_CDR' : document.getElementById('letterType').value),
                 letterData: isCDROnly ? null : {
                     letterType: document.getElementById('letterType').value,
                     prompt: document.getElementById('promptOutput').textContent,
                     clientName: currentClient.name,
+                    clientPrefix: clientPrefix,
+                    letterDate: formattedDate,
                     matterNumber: currentClient.matterNumber,
                     court: currentClient.court,
                     templateFileName: getTemplateFileName(document.getElementById('letterType').value)
@@ -2343,6 +2354,18 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                 <div class="letter-history">
                     <h4>Letter History</h4>
                     <div id="letterHistoryList"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="clientPrefix">Client Prefix:</label>
+                    <select id="clientPrefix">
+                        <option value="">-- Select Prefix --</option>
+                        <option value="Mr">Mr</option>
+                        <option value="Mrs">Mrs</option>
+                        <option value="Ms">Ms</option>
+                        <option value="Miss">Miss</option>
+                        <option value="Dr">Dr</option>
+                    </select>
                 </div>
                 
                 <div class="form-group">
