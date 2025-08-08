@@ -504,21 +504,32 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
             
             if (!letterType || !currentClient) {
                 dynamicFields.innerHTML = '';
-                cdrSection.style.display = 'none';
+                if (cdrSection) cdrSection.style.display = 'none';
                 return;
             }
             
-            cdrSection.style.display = 'block';
+            if (cdrSection) cdrSection.style.display = 'block';
             
-            const fieldGenerators = {
-                'CCL': getCCLFields,
-                'Mention': getMentionFields,
-                'Final': getFinalFields,
-                'FeeReestimate': getFeeReestimateFields
-            };
+            let fieldsHTML = '';
             
-            dynamicFields.innerHTML = fieldGenerators[letterType]?.() || '';
+            switch(letterType) {
+                case 'CCL':
+                    fieldsHTML = getCCLFields();
+                    break;
+                case 'Mention':
+                    fieldsHTML = getMentionFields();
+                    break;
+                case 'Final':
+                    fieldsHTML = getFinalFields();
+                    break;
+                case 'FeeReestimate':
+                    fieldsHTML = getFeeReestimateFields();
+                    break;
+            }
             
+            dynamicFields.innerHTML = fieldsHTML;
+            
+            // Initialize any conditional logic
             if (letterType === 'CCL') {
                 toggleLegalAidFields();
                 togglePleaOptions();
@@ -538,55 +549,47 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                 return;
             }
             
-            let prompt = `Generate ${letterType} letter for:\n`;
-            prompt += `Client: ${currentClient.name}\n`;
-            prompt += `Matter: ${currentClient.matterNumber}\n`;
-            prompt += `Court: ${currentClient.court}\n`;
-            prompt += `Charges: ${currentClient.charges}\n\n`;
-            prompt += `[Letter specific content would be generated here based on form inputs]\n`;
+            let prompt = '';
             
-            let cdrData = null;
-            
-            if (document.getElementById('generateCDRWithLetter')?.checked) {
-                const nextCourtDate = document.getElementById('nextCourtDate')?.value;
-                if (nextCourtDate) {
-                    cdrData = {
-                        outcomeCourt: currentClient.court,
-                        outcomeDate: getTodayDate(),
-                        startTime: '09:30',
-                        finishTime: '10:00',
-                        courtDate: nextCourtDate,
-                        solicitor: 'AAG',
-                        clientName: currentClient.name,
-                        fileNumber: currentClient.matterNumber,
-                        reason: document.getElementById('letterCDRReason')?.value || 'Mention',
-                        court: currentClient.court,
-                        courtTime: '09:30',
-                        allocateTo: getLetterAllocatedTo(),
-                        clientExcused: document.getElementById('letterCDRClientExcused')?.checked || false,
-                        feeReminder: ''
-                    };
-                }
-            }
-            
-            if (cdrData) {
-                prompt += '\n\n--- CDR ALSO GENERATED ---\n';
-                prompt += formatCDRText(cdrData);
-                currentCDRData = cdrData;
+            switch(letterType) {
+                case 'CCL':
+                    prompt = generateCCLPrompt();
+                    break;
+                case 'Mention':
+                    prompt = generateMentionPrompt();
+                    break;
+                case 'Final':
+                    prompt = generateFinalPrompt();
+                    break;
+                case 'FeeReestimate':
+                    prompt = generateFeeReestimatePrompt();
+                    break;
             }
             
             const outputDiv = document.getElementById('promptOutput');
             outputDiv.textContent = prompt;
             outputDiv.style.display = 'block';
             
+            // Update letter history
             if (!currentClient.letterHistory) currentClient.letterHistory = [];
             currentClient.letterHistory.push({
                 type: letterType,
                 date: new Date().toISOString().slice(0,10),
-                notes: `Generated ${letterType} prompt${cdrData ? ' with CDR' : ''}`
+                notes: `Generated ${letterType} prompt`
             });
             
-            currentClient[letterType.toLowerCase().replace('reestimate', '')] = true;
+            // Update letter sent status
+            switch(letterType) {
+                case 'CCL':
+                    currentClient.ccl = true;
+                    break;
+                case 'Mention':
+                    currentClient.mention = true;
+                    break;
+                case 'Final':
+                    currentClient.final = true;
+                    break;
+            }
             
             saveData();
             updateUI();
@@ -1537,6 +1540,353 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                                                outcome?.includes('ICO')) ? 'block' : 'none';
                 }
             }
+        };
+        
+        // Generate CCL Prompt
+        const generateCCLPrompt = () => {
+            const contactMethod = document.getElementById('contactMethod')?.value;
+            const contactDate = document.getElementById('contactDate')?.value;
+            const charges = getSelectedCharges();
+            const plea = document.getElementById('plea')?.value;
+            const legalAid = document.getElementById('legalAidStatus')?.value;
+            const clientInstructions = document.getElementById('clientInstructions')?.value;
+            const nextCourtDate = document.getElementById('nextCourtDate')?.value;
+            const requiredAttend = document.getElementById('requiredAttend')?.value;
+            
+            let prompt = `Using the CCL template, draft a letter with this information:\n\n`;
+            prompt += `CLIENT: ${currentClient.name}\n`;
+            prompt += `ADDRESS: ${currentClient.address || 'Not provided'}\n`;
+            prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
+            
+            prompt += `Contact: ${contactMethod} on ${formatDate(contactDate)}\n\n`;
+            
+            prompt += `COURT: ${currentClient.court}\n`;
+            prompt += `MATTER TYPE: ${currentClient.matterType}\n`;
+            prompt += `CHARGES: ${charges}\n\n`;
+            
+            // Legal Aid status
+            if (legalAid === 'Yes') {
+                prompt += `LEGAL AID: Yes`;
+                const contribution = document.getElementById('contribution')?.value;
+                if (contribution) {
+                    prompt += ` - Contribution: ${contribution}`;
+                }
+            } else {
+                prompt += `PRIVATE CLIENT - Estimate: ${document.getElementById('estimate')?.value || 'TBD'}`;
+                if (document.getElementById('depositPaid')?.value === 'Yes') {
+                    prompt += ` (deposit of ${document.getElementById('depositAmount')?.value} already paid)`;
+                }
+            }
+            prompt += `\n\n`;
+            
+            prompt += `PLEA: ${plea}\n`;
+            prompt += `CLIENT INSTRUCTIONS: ${clientInstructions}\n`;
+            
+            if (nextCourtDate) {
+                prompt += `NEXT COURT DATE: ${formatDate(nextCourtDate)}`;
+                if (requiredAttend) {
+                    prompt += ` - Client ${requiredAttend === 'Yes' ? 'required' : 'not required'} to attend`;
+                }
+                prompt += `\n`;
+            }
+            
+            // Sentence materials (if guilty plea)
+            if (plea === 'Guilty') {
+                const materials = getSelectedMaterials();
+                if (materials) {
+                    prompt += `\nSENTENCE MATERIALS DISCUSSED: ${materials}\n`;
+                }
+            }
+            
+            // ADVO details
+            const advoType = document.getElementById('advoType')?.value;
+            if (advoType) {
+                prompt += `\nADVO: ${advoType} for ${document.getElementById('pinop')?.value}`;
+                prompt += ` (${document.getElementById('advoDuration')?.value})`;
+                const conditions = getADVOConditions();
+                prompt += `\nCONDITIONS: ${conditions}\n`;
+            }
+            
+            // Bail conditions
+            if (document.getElementById('hasBail')?.value === 'Yes') {
+                const bailConditions = getBailConditions();
+                if (bailConditions) {
+                    prompt += `\nBAIL CONDITIONS: ${bailConditions}\n`;
+                }
+            }
+            
+            // Additional information
+            const additionalInfo = document.getElementById('additionalInfo')?.value;
+            if (additionalInfo) {
+                prompt += `\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
+            }
+            
+            return prompt;
+        };
+        
+        // Generate Mention Prompt
+        const generateMentionPrompt = () => {
+            const courtDate = document.getElementById('courtDate')?.value;
+            const whoAppeared = document.getElementById('whoAppeared')?.value;
+            const listedFor = document.getElementById('listedFor')?.value;
+            const whatOccurred = document.getElementById('whatOccurred')?.value;
+            const nextCourtDate = document.getElementById('nextCourtDate')?.value;
+            const nextListedFor = document.getElementById('nextListedFor')?.value;
+            const requiredAttend = document.getElementById('requiredAttend')?.value;
+            
+            let prompt = `Using the Mention Letter template, draft a letter with this information:\n\n`;
+            prompt += `CLIENT: ${currentClient.name}\n`;
+            prompt += `ADDRESS: ${currentClient.address || 'Not provided'}\n`;
+            prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
+            
+            prompt += `COURT: ${currentClient.court}\n`;
+            prompt += `Date of appearance: ${formatDate(courtDate)}\n`;
+            prompt += `Listed for: ${listedFor}\n`;
+            prompt += `Who appeared: ${whoAppeared}\n\n`;
+            
+            prompt += `WHAT OCCURRED: ${whatOccurred}\n\n`;
+            
+            if (nextCourtDate) {
+                prompt += `NEXT DATE: ${formatDate(nextCourtDate)}`;
+                if (nextListedFor) {
+                    prompt += ` for ${nextListedFor}`;
+                }
+                prompt += `\n`;
+                if (requiredAttend) {
+                    prompt += `Client ${requiredAttend === 'Yes' ? 'required' : 'not required'} to attend\n`;
+                }
+            }
+            
+            // Billing info if applicable
+            const interimInvoice = document.getElementById('interimInvoice')?.value;
+            if (interimInvoice) {
+                const status = document.getElementById('invoiceStatus')?.value;
+                prompt += `\nInterim invoice amount: ${interimInvoice}`;
+                if (status) {
+                    prompt += ` (${status.toLowerCase()})`;
+                }
+                prompt += `\n`;
+            }
+            
+            const additionalInfo = document.getElementById('additionalInfo')?.value;
+            if (additionalInfo) {
+                prompt += `\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
+            }
+            
+            return prompt;
+        };
+        
+        // Generate Final Prompt
+        const generateFinalPrompt = () => {
+            const courtDate = document.getElementById('courtDate')?.value;
+            const finalListedFor = document.getElementById('finalListedFor')?.value;
+            const whoAppeared = document.getElementById('whoAppeared')?.value;
+            const outcome = document.getElementById('outcome')?.value;
+            const penalty = document.getElementById('penalty')?.value;
+            const penaltyLength = document.getElementById('penaltyLength')?.value;
+            const appealProspects = document.getElementById('appealProspects')?.value;
+            
+            let prompt = `Using the Final Letter template, draft a letter with this information:\n\n`;
+            prompt += `CLIENT: ${currentClient.name}\n`;
+            prompt += `ADDRESS: ${currentClient.address || 'Not provided'}\n`;
+            prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
+            
+            prompt += `COURT: ${currentClient.court}\n`;
+            prompt += `Date: ${formatDate(courtDate)}\n`;
+            prompt += `Matter was listed for: ${finalListedFor}\n\n`;
+            
+            prompt += `CHARGES: ${currentClient.charges}\n\n`;
+            
+            if (whoAppeared === 'Counsel appeared') {
+                prompt += `REPRESENTATION: Counsel appeared (need name)\n`;
+            } else {
+                prompt += `REPRESENTATION: I appeared\n`;
+            }
+            
+            prompt += `\nOUTCOME: ${outcome}\n`;
+            
+            if (penalty) {
+                prompt += `\nPENALTY: ${penalty}`;
+                if (penaltyLength) {
+                    prompt += ` - ${penaltyLength}`;
+                }
+                prompt += `\n`;
+                
+                const conditions = document.getElementById('penaltyConditions')?.value;
+                if (conditions) {
+                    prompt += `CONDITIONS: ${conditions}\n`;
+                }
+            }
+            
+            // License disqualification
+            const license = document.getElementById('licenseDisqualification')?.value;
+            if (license) {
+                prompt += `\nLICENSE DISQUALIFICATION: ${license}\n`;
+                const interlock = document.getElementById('interlockOrder')?.value;
+                if (interlock) {
+                    prompt += `INTERLOCK ORDER: ${interlock}\n`;
+                }
+            }
+            
+            // ADVO if final
+            if (document.getElementById('finalADVO')?.value === 'Yes') {
+                const pinop = document.getElementById('pinop')?.value;
+                const duration = document.getElementById('advoDuration')?.value;
+                const conditions = getFinalADVOConditions();
+                prompt += `\nADVO made final for ${pinop} (${duration})\n`;
+                prompt += `CONDITIONS: ${conditions}\n`;
+            }
+            
+            prompt += `\nAPPEAL PROSPECTS: ${appealProspects}\n`;
+            
+            // Billing
+            if (currentClient.legalAid) {
+                prompt += `\nLEGAL AID MATTER`;
+                if (currentClient.contribution) {
+                    prompt += ` - Outstanding contribution: ${currentClient.contribution}`;
+                }
+            } else {
+                const finalInvoice = document.getElementById('finalInvoiceAmount')?.value;
+                const outstanding = document.getElementById('outstandingAmount')?.value;
+                prompt += `\nPRIVATE MATTER`;
+                if (finalInvoice) {
+                    prompt += ` - Final invoice: ${finalInvoice}`;
+                }
+                if (outstanding) {
+                    prompt += ` - Outstanding: ${outstanding}`;
+                }
+            }
+            
+            const additionalInfo = document.getElementById('additionalInfo')?.value;
+            if (additionalInfo) {
+                prompt += `\n\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
+            }
+            
+            return prompt;
+        };
+        
+        // Generate Fee Re-estimate Prompt
+        const generateFeeReestimatePrompt = () => {
+            const conferenceDate = document.getElementById('conferenceDate')?.value;
+            const conferenceType = document.getElementById('conferenceType')?.value;
+            const originalEstimate = document.getElementById('originalEstimate')?.value;
+            const additionalAmount = document.getElementById('additionalAmount')?.value;
+            const reasonIncrease = document.getElementById('reasonIncrease')?.value;
+            const nextCourtDate = document.getElementById('nextCourtDate')?.value;
+            const nextListedFor = document.getElementById('nextListedFor')?.value;
+            
+            let prompt = `Using the Fee Re-estimate Letter template, draft a letter with this information:\n\n`;
+            prompt += `CLIENT: ${currentClient.name}\n`;
+            prompt += `ADDRESS: ${currentClient.address || 'Not provided'}\n`;
+            prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
+            
+            prompt += `Conference date: ${formatDate(conferenceDate)}\n`;
+            prompt += `Conference type: ${conferenceType}\n\n`;
+            
+            prompt += `COURT: ${currentClient.court}\n`;
+            
+            if (nextCourtDate) {
+                prompt += `Next court date: ${formatDate(nextCourtDate)}`;
+                if (nextListedFor) {
+                    prompt += ` for ${nextListedFor}`;
+                }
+                prompt += `\n`;
+            }
+            
+            const total = (parseFloat(originalEstimate) || 0) + (parseFloat(additionalAmount) || 0);
+            prompt += `\nOriginal estimate: ${originalEstimate}\n`;
+            prompt += `Additional amount: ${additionalAmount}\n`;
+            prompt += `New total estimate: ${total}\n`;
+            prompt += `Reason for increase: ${reasonIncrease}\n`;
+            
+            // Matter progress
+            const progress = document.getElementById('matterProgress')?.value;
+            if (progress) {
+                prompt += `\nMatter progress: ${progress}\n`;
+            }
+            
+            // Invoice status
+            const interimAmount = document.getElementById('interimInvoiceAmount')?.value;
+            if (interimAmount) {
+                const status = document.getElementById('interimStatus')?.value;
+                prompt += `\nInterim invoice: ${interimAmount}`;
+                if (status) {
+                    prompt += ` - ${status}`;
+                }
+                prompt += `\n`;
+            }
+            
+            // Trust deposit
+            const trustDeposit = document.getElementById('trustDeposit')?.value;
+            if (trustDeposit) {
+                prompt += `Trust deposit required: ${trustDeposit}\n`;
+            }
+            
+            if (currentClient.matterType?.includes('Criminal')) {
+                prompt += `\nNote: This is a criminal matter (use criminal variable list in paragraph 27)\n`;
+            }
+            
+            const additionalInfo = document.getElementById('additionalInfo')?.value;
+            if (additionalInfo) {
+                prompt += `\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
+            }
+            
+            return prompt;
+        };
+        
+        // Helper functions for collecting form data
+        const getSelectedCharges = () => {
+            const charges = [];
+            document.querySelectorAll('input[type="checkbox"][id^="charge_"]:checked').forEach(cb => {
+                charges.push(cb.value);
+            });
+            
+            const additional = document.getElementById('additionalCharges')?.value;
+            if (additional) charges.push(additional);
+            
+            const counts = document.getElementById('counts')?.value;
+            let chargeString = charges.length > 0 ? charges.join(', ') : currentClient.charges;
+            
+            if (counts && counts > 1) {
+                chargeString += ` (${counts} counts)`;
+            }
+            
+            return chargeString;
+        };
+        
+        const getSelectedMaterials = () => {
+            const materials = [];
+            document.querySelectorAll('input[type="checkbox"][id^="mat_"]:checked').forEach(cb => {
+                materials.push(cb.value);
+            });
+            return materials.join(', ');
+        };
+        
+        const getADVOConditions = () => {
+            const conditions = ['1 (mandatory)'];
+            document.querySelectorAll('input[type="checkbox"][id^="advo_"]:checked').forEach(cb => {
+                conditions.push(cb.value);
+            });
+            return conditions.join(', ');
+        };
+        
+        const getFinalADVOConditions = () => {
+            const conditions = ['1 (mandatory)'];
+            document.querySelectorAll('input[type="checkbox"][id^="final_advo_"]:checked').forEach(cb => {
+                conditions.push(cb.value);
+            });
+            return conditions.join(', ');
+        };
+        
+        const getBailConditions = () => {
+            const select = document.getElementById('bailConditions');
+            if (!select) return '';
+            const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+            
+            const additional = document.getElementById('additionalBail')?.value;
+            if (additional) selected.push(additional);
+            
+            return selected.join(', ');
         };
         
         // ===== INITIALIZATION =====
