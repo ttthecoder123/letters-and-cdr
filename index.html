@@ -4,659 +4,990 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Legal Letter Generation System</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 8px;
+            padding: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            color: #64748b;
+        }
+        
+        .tab.active {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        }
+        
+        .tab:hover:not(.active) {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .master-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .master-table th {
+            background: #f1f5f9;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .master-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .master-table tr:hover {
+            background: #f8fafc;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-waiting { background: #fef3c7; color: #92400e; }
+        .status-completed { background: #dbeafe; color: #1e40af; }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .checkbox-item:hover {
+            border-color: #3b82f6;
+            background: #f8fafc;
+        }
+        
+        .checkbox-item input[type="checkbox"],
+        .checkbox-item input[type="radio"] {
+            width: auto;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .output-box {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .client-info {
+            background: #f0f9ff;
+            border: 2px solid #0284c7;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .client-info h3 {
+            margin: 0 0 12px 0;
+            color: #0284c7;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .info-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .info-value {
+            font-weight: 500;
+            color: #1f2937;
+        }
+        
+        .section {
+            border-top: 2px solid #eee;
+            margin-top: 25px;
+            padding-top: 20px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+        
+        .charges-section {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 12px;
+        }
+        
+        .charges-category {
+            margin-bottom: 20px;
+        }
+        
+        .charges-category h4 {
+            color: #374151;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .multi-select {
+            min-height: 120px;
+        }
+        
+        .conditional {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f0f8ff;
+            border-radius: 8px;
+            border: 1px solid #e0e7ff;
+        }
+        
+        .database-status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status-connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .letter-history {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+        
+        .letter-history h4 {
+            margin: 0 0 12px 0;
+            color: #374151;
+        }
+        
+        .letter-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .letter-item:last-child {
+            border-bottom: none;
+        }
+        
+        .add-client-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            transition: all 0.2s;
+        }
+        
+        .add-client-btn:hover {
+            background: #2563eb;
+            transform: scale(1.1);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        
+        .close:hover {
+            color: #374151;
+        }
+        
+        @media (max-width: 768px) {
+            .checkbox-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+        }
+        
+        /* Mobile-specific styles for iPhone */
+        @media (max-width: 430px) {
+            body {
+                padding: 10px;
+                font-size: 16px;
+            }
+            
+            .container {
+                padding: 0;
+            }
+            
+            .header {
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .header p {
+                font-size: 14px;
+            }
+            
+            /* Tab navigation - make it a dropdown on mobile */
+            .tabs {
+                display: block;
+                position: relative;
+                background: transparent;
+                padding: 0;
+                box-shadow: none;
+            }
+            
+            .tab {
+                display: block;
+                width: 100%;
+                padding: 15px;
+                margin-bottom: 2px;
+                border-radius: 8px;
+                font-size: 16px;
+                text-align: left;
+            }
+            
+            /* Larger form elements */
+            .form-group input,
+            .form-group select,
+            .form-group textarea {
+                font-size: 16px;
+                padding: 15px;
+                border-radius: 8px;
+            }
+            
+            .form-group label {
+                font-size: 16px;
+                margin-bottom: 10px;
+            }
+            
+            /* Checkboxes - make them larger and easier to tap */
+            .checkbox-item {
+                padding: 15px;
+                margin-bottom: 8px;
+                border-radius: 8px;
+                font-size: 16px;
+            }
+            
+            .checkbox-item input[type="checkbox"],
+            .checkbox-item input[type="radio"] {
+                width: 20px;
+                height: 20px;
+                margin-right: 12px;
+            }
+            
+            /* Buttons - full width and larger */
+            .btn {
+                width: 100%;
+                padding: 16px;
+                font-size: 16px;
+                margin-bottom: 10px;
+                margin-right: 0;
+            }
+            
+            .button-group {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            /* Table adjustments */
+            .master-table {
+                font-size: 12px;
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .master-table th,
+            .master-table td {
+                padding: 8px 4px;
+                font-size: 12px;
+            }
+            
+            /* Hide some columns on mobile */
+            .master-table th:nth-child(4),
+            .master-table td:nth-child(4),
+            .master-table th:nth-child(5),
+            .master-table td:nth-child(5) {
+                display: none;
+            }
+            
+            /* Section spacing */
+            .section {
+                margin-top: 20px;
+                padding-top: 20px;
+            }
+            
+            .section-title {
+                font-size: 20px;
+                margin-bottom: 15px;
+            }
+            
+            /* Output box */
+            .output-box {
+                font-size: 14px;
+                padding: 15px;
+                max-height: 300px;
+            }
+            
+            /* Charges section - stack vertically */
+            .charges-category {
+                margin-bottom: 15px;
+            }
+            
+            .charges-category h4 {
+                font-size: 18px;
+                margin-bottom: 12px;
+            }
+            
+            /* Info grid - single column on mobile */
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            /* Modal adjustments */
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+                margin: 20px auto;
+            }
+            
+            /* Add client button - fixed position */
+            .add-client-btn {
+                bottom: 20px;
+                right: 20px;
+                width: 56px;
+                height: 56px;
+                font-size: 28px;
+            }
+            
+            /* Multi-select - make taller */
+            .multi-select {
+                min-height: 150px;
+                font-size: 16px;
+            }
+            
+            /* Client info box */
+            .client-info {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            
+            .client-info h3 {
+                font-size: 18px;
+            }
+            
+            /* Letter history */
+            .letter-history {
+                padding: 15px;
+                margin-top: 15px;
+            }
+            
+            /* Conditional sections */
+            .conditional {
+                margin-top: 10px;
+                padding: 12px;
+            }
+            
+            /* Analytics grid */
+            #analytics .tab-content > div:first-child {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            
+            #analytics .tab-content > div:first-child > div {
+                padding: 15px;
+            }
+            
+            #analytics .tab-content > div:first-child h3 {
+                font-size: 14px;
+            }
+            
+            #analytics .tab-content > div:first-child p {
+                font-size: 1.5em;
+            }
+            
+            /* Database status */
+            .database-status {
+                font-size: 14px;
+                padding: 12px;
+                margin-bottom: 15px;
+            }
+            
+            /* Remove hover effects on mobile */
+            .checkbox-item:hover {
+                border-color: #e5e7eb;
+                background: transparent;
+            }
+            
+            /* Tab content padding */
+            .tab-content {
+                padding: 20px;
+                border-radius: 12px;
+            }
+            
+            /* Sticky action buttons at bottom */
+            #generator .btn-primary,
+            #generator .btn-success {
+                position: fixed;
+                bottom: 20px;
+                width: calc(50% - 25px);
+                z-index: 100;
+            }
+            
+            #generator .btn-primary {
+                left: 20px;
+            }
+            
+            #generator .btn-success {
+                right: 20px;
+            }
+            
+            #generator > div:last-child {
+                padding-bottom: 80px;
+            }
+            
+            /* Zapier status */
+            #zapierStatus {
+                position: fixed;
+                bottom: 80px;
+                left: 20px;
+                right: 20px;
+                z-index: 99;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Legal Letter Generation System</h1>
+            <p>Streamlined client matter management and automated Claude prompt generation</p>
+        </div>
+        
+        <div class="database-status" id="databaseStatus">
+            Database: Not Connected
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('master')">Master Client List</button>
+            <button class="tab" onclick="switchTab('generator')">Letter Generator</button>
+            <button class="tab" onclick="switchTab('analytics')">Analytics</button>
+        </div>
+        
+        <!-- Master Client List Tab -->
+        <div id="master" class="tab-content active">
+            <h2>Active Client Matters</h2>
+            <p>Manage your active matters and track letter status</p>
+            
+            <table class="master-table" id="clientTable">
+                <thead>
+                    <tr>
+                        <th>Client Name</th>
+                        <th>Matter #</th>
+                        <th>Court</th>
+                        <th>Charges</th>
+                        <th>Status</th>
+                        <th>CCL</th>
+                        <th>Mention</th>
+                        <th>Final</th>
+                        <th>Next Court</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="clientTableBody">
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
+                            No clients loaded. Please upload an Excel database or add clients manually.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 20px;">
+                <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" onchange="loadExcelFile()" style="display: none;">
+                <button class="btn btn-primary" onclick="document.getElementById('excelFile').click()">
+                    Upload Excel Database
+                </button>
+                <button class="btn btn-secondary" onclick="exportToExcel()">
+                    Export to Excel
+                </button>
+            </div>
+        </div>
+        
+        <!-- Letter Generator Tab -->
+        <div id="generator" class="tab-content">
+            <h2>Generate Letter Prompt</h2>
+            
+            <div class="form-group">
+                <label for="clientSelect">Select Client:</label>
+                <select id="clientSelect" onchange="loadClientInfo()">
+                    <option value="">-- Select a Client --</option>
+                </select>
+            </div>
+            
+            <div id="clientInfoSection" style="display: none;">
+                <div class="client-info">
+                    <h3>Client Information</h3>
+                    <div class="info-grid" id="clientInfoGrid">
+                        <!-- Auto-populated from selection -->
+                    </div>
+                </div>
+                
+                <div class="letter-history" id="letterHistorySection">
+                    <h4>Letter History</h4>
+                    <div id="letterHistoryList">
+                        <!-- Auto-populated -->
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="letterType">Letter Type:</label>
+                    <select id="letterType" onchange="updateLetterFields()">
+                        <option value="">-- Select Letter Type --</option>
+                        <option value="CCL">Client Care Letter (CCL)</option>
+                        <option value="Mention">Mention Letter</option>
+                        <option value="Final">Final Letter</option>
+                        <option value="FeeReestimate">Fee Re-estimate Letter</option>
+                    </select>
+                </div>
+                
+                <div id="dynamicFields">
+                    <!-- Dynamic fields will be inserted here based on letter type -->
+                </div>
+                
+                <div style="margin-top: 30px;">
+                    <button class="btn btn-primary" onclick="generatePrompt()">Generate Claude Prompt</button>
+                    <button class="btn btn-success" onclick="copyPrompt()">Copy to Clipboard</button>
+                    <button class="btn btn-secondary" onclick="clearForm()">Clear Form</button>
+                    <button class="btn btn-success" onclick="sendToZapier()">Send to Zapier</button>
+                    <button class="btn btn-primary" onclick="updateExcelRecord()">Update Excel Record</button>
+                </div>
+                
+                <div id="promptOutput" class="output-box" style="display: none;">
+                    <!-- Generated prompt appears here -->
+                </div>
+                
+                <div id="zapierStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
+            </div>
+        </div>
+        
+        <!-- Analytics Tab -->
+        <div id="analytics" class="tab-content">
+            <h2>Matter Analytics</h2>
+            <p>Overview of your client matters and letter status</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; text-align: center;">
+                    <h3 style="margin: 0; color: #0284c7;">Total Matters</h3>
+                    <p style="font-size: 2em; font-weight: bold; margin: 10px 0; color: #0284c7;" id="totalMatters">0</p>
+                </div>
+                <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; text-align: center;">
+                    <h3 style="margin: 0; color: #16a34a;">Active Cases</h3>
+                    <p style="font-size: 2em; font-weight: bold; margin: 10px 0; color: #16a34a;" id="activeMatters">0</p>
+                </div>
+                <div style="background: #fefce8; padding: 20px; border-radius: 8px; text-align: center;">
+                    <h3 style="margin: 0; color: #ca8a04;">Pending Letters</h3>
+                    <p style="font-size: 2em; font-weight: bold; margin: 10px 0; color: #ca8a04;" id="pendingLetters">0</p>
+                </div>
+                <div style="background: #fdf2f8; padding: 20px; border-radius: 8px; text-align: center;">
+                    <h3 style="margin: 0; color: #be185d;">Next Week</h3>
+                    <p style="font-size: 2em; font-weight: bold; margin: 10px 0; color: #be185d;" id="upcomingCourt">0</p>
+                </div>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3>Matters by Court</h3>
+                <div id="courtBreakdown"></div>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px;">
+                <h3>Letter Status Overview</h3>
+                <div id="letterStatusChart"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Client Modal -->
+    <div id="addClientModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Add New Client</h2>
+            
+            <form id="addClientForm" onsubmit="addClient(event)">
+                <div class="form-group">
+                    <label for="newClientName">Client Name:</label>
+                    <input type="text" id="newClientName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newClientAddress">Address:</label>
+                    <textarea id="newClientAddress" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newMatterNumber">Matter Reference:</label>
+                    <input type="text" id="newMatterNumber" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newCourt">Court:</label>
+                    <select id="newCourt" required>
+                        <option value="">-- Select Court --</option>
+                        <option value="Balmain Local Court">Balmain Local Court</option>
+                        <option value="Bankstown Local Court">Bankstown Local Court</option>
+                        <option value="Blacktown Local Court">Blacktown Local Court</option>
+                        <option value="Burwood Local Court">Burwood Local Court</option>
+                        <option value="Campbelltown District Court">Campbelltown District Court</option>
+                        <option value="Campbelltown Local Court">Campbelltown Local Court</option>
+                        <option value="Downing Centre District Court">Downing Centre District Court</option>
+                        <option value="Downing Centre Local Court">Downing Centre Local Court</option>
+                        <option value="Fairfield Local Court">Fairfield Local Court</option>
+                        <option value="Hornsby Local Court">Hornsby Local Court</option>
+                        <option value="Liverpool Local Court">Liverpool Local Court</option>
+                        <option value="Manly Local Court">Manly Local Court</option>
+                        <option value="Newtown Local Court">Newtown Local Court</option>
+                        <option value="Parramatta District Court">Parramatta District Court</option>
+                        <option value="Parramatta Local Court">Parramatta Local Court</option>
+                        <option value="Penrith District Court">Penrith District Court</option>
+                        <option value="Penrith Local Court">Penrith Local Court</option>
+                        <option value="Sutherland Local Court">Sutherland Local Court</option>
+                        <option value="Sydney District Court">Sydney District Court</option>
+                        <option value="Waverley Local Court">Waverley Local Court</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newMatterType">Matter Type:</label>
+                    <select id="newMatterType" required>
+                        <option value="">-- Select Matter Type --</option>
+                        <option value="Criminal - Summary">Criminal - Summary</option>
+                        <option value="Criminal - Indictable">Criminal - Indictable</option>
+                        <option value="ADVO">ADVO</option>
+                        <option value="Bail Application">Bail Application</option>
+                        <option value="Appeal">Appeal</option>
+                        <option value="Section 14 Application">Section 14 Application</option>
+                        <option value="Trial">Trial</option>
+                        <option value="Sentence">Sentence</option>
+                        <option value="Committal">Committal</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newCharges">Charges:</label>
+                    <input type="text" id="newCharges" placeholder="e.g., Common Assault - s61 Crimes Act" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newLegalAid">Legal Aid?</label>
+                    <select id="newLegalAid">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                    </select>
+                </div>
+                
+        <div class="form-group">
+                    <label for="newNextCourt">Next Court Date:</label>
+                    <input type="date" id="newNextCourt">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Add Client</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <button class="add-client-btn" onclick="openModal()" title="Add New Client">+</button>
+    
+    <!-- Include SheetJS library for Excel handling -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <script>
-        // ===== GLOBAL STATE =====
+        // Global variables
         let clients = [];
         let currentClient = null;
-        let currentCDRData = null;
         
-        // ===== UTILITIES =====
-        const formatDate = (dateString) => {
-            if (!dateString) return '';
-            return new Date(dateString).toLocaleDateString('en-AU', { 
-                day: 'numeric', month: 'long', year: 'numeric' 
-            });
-        };
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSavedData();
+            updateUI();
+        });
         
-        const getTodayDate = () => new Date().toISOString().split('T')[0];
-        
-        const getTemplateFileName = (type) => ({
-            'CCL': 'CCL_Template.docx',
-            'Mention': 'Mention_Template.docx',
-            'Final': 'Final_Template.docx',
-            'FeeReestimate': 'FeeReestimate_Template.docx'
-        }[type] || 'Template.docx');
-        
-        // ===== DATA MANAGEMENT =====
-        const saveData = () => {
-            try {
-                if (typeof(Storage) !== "undefined") {
-                    localStorage.setItem('legalClients', JSON.stringify(clients));
-                }
-            } catch(e) {
-                console.log('Storage not available');
+        // Load saved data from localStorage
+        function loadSavedData() {
+            const savedClients = localStorage.getItem('legalClients');
+            if (savedClients) {
+                clients = JSON.parse(savedClients);
+                updateDatabaseStatus(true);
             }
-        };
+        }
         
-        const loadSavedData = () => {
-            try {
-                if (typeof(Storage) !== "undefined") {
-                    const saved = localStorage.getItem('legalClients');
-                    if (saved) {
-                        clients = JSON.parse(saved);
-                        updateDatabaseStatus(true);
-                    }
-                }
-            } catch(e) {
-                console.log('Storage not available');
-            }
-        };
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('legalClients', JSON.stringify(clients));
+        }
         
-        // ===== UI UPDATES =====
-        const updateDatabaseStatus = (connected) => {
-            const status = document.getElementById('databaseStatus');
-            if (status) {
-                status.textContent = connected ? 
-                    `Database: Connected (${clients.length} clients)` : 
-                    'Database: Not Connected';
-                status.className = `database-status status-${connected ? 'connected' : 'disconnected'}`;
-            }
-        };
-        
-        const updateUI = () => {
+        // Update all UI elements
+        function updateUI() {
             loadClientTable();
             loadClientSelect();
-            loadCDRClientSelect();
             updateAnalytics();
-        };
+        }
         
-        const loadClientTable = () => {
-            const tbody = document.getElementById('clientTableBody');
-            if (!tbody) return;
-            
-            tbody.innerHTML = clients.length === 0 ? 
-                `<tr><td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
-                    No clients loaded. Please upload an Excel database or add clients manually.
-                </td></tr>` :
-                clients.map(client => `
-                    <tr>
-                        <td><strong>${client.name}</strong></td>
-                        <td>${client.matterNumber}</td>
-                        <td>${client.court}</td>
-                        <td>${client.charges}</td>
-                        <td><span class="status-badge status-${client.status.toLowerCase()}">${client.status}</span></td>
-                        <td>${client.ccl ? '✅' : '❌'}</td>
-                        <td>${client.mention ? '✅' : '❌'}</td>
-                        <td>${client.final ? '✅' : '❌'}</td>
-                        <td>${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</td>
-                        <td><button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" 
-                            onclick="selectClientForLetter(${client.id})">Generate Letter</button></td>
-                    </tr>
-                `).join('');
-        };
-        
-        const loadClientSelect = () => {
-            const select = document.getElementById('clientSelect');
-            if (!select) return;
-            select.innerHTML = '<option value="">-- Select a Client --</option>' +
-                clients.map(c => `<option value="${c.id}">${c.name} (${c.matterNumber})</option>`).join('');
-        };
-        
-        const loadCDRClientSelect = () => {
-            const select = document.getElementById('cdrClientSelect');
-            if (!select) return;
-            select.innerHTML = '<option value="">-- Manual Entry --</option>' +
-                clients.map(c => `<option value="${c.id}">${c.name} (${c.matterNumber})</option>`).join('');
-        };
-        
-        const updateAnalytics = () => {
-            const els = {
-                totalMatters: document.getElementById('totalMatters'),
-                activeMatters: document.getElementById('activeMatters'),
-                pendingLetters: document.getElementById('pendingLetters'),
-                upcomingCourt: document.getElementById('upcomingCourt')
-            };
-            
-            if (els.totalMatters) els.totalMatters.textContent = clients.length;
-            if (els.activeMatters) els.activeMatters.textContent = clients.filter(c => c.status === 'Active').length;
-            if (els.pendingLetters) els.pendingLetters.textContent = clients.filter(c => !c.ccl).length;
-            
-            const nextWeek = new Date();
-            nextWeek.setDate(nextWeek.getDate() + 7);
-            const upcoming = clients.filter(c => {
-                if (!c.nextCourt) return false;
-                const courtDate = new Date(c.nextCourt);
-                return courtDate <= nextWeek && courtDate >= new Date();
-            }).length;
-            if (els.upcomingCourt) els.upcomingCourt.textContent = upcoming;
-            
-            // Court breakdown
-            const courtBreakdown = {};
-            clients.forEach(c => courtBreakdown[c.court] = (courtBreakdown[c.court] || 0) + 1);
-            
-            const courtDiv = document.getElementById('courtBreakdown');
-            if (courtDiv) {
-                courtDiv.innerHTML = Object.entries(courtBreakdown)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([court, count]) => `
-                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                            <span>${court}</span><strong>${count}</strong>
-                        </div>
-                    `).join('') || '<p style="color: #6b7280;">No data available</p>';
-            }
-            
-            // Letter status
-            const statusDiv = document.getElementById('letterStatusChart');
-            if (statusDiv) {
-                const stats = {
-                    ccl: clients.filter(c => c.ccl).length,
-                    mention: clients.filter(c => c.mention).length,
-                    final: clients.filter(c => c.final).length
-                };
-                
-                statusDiv.innerHTML = `
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-                        <div style="text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #3b82f6;">${stats.ccl}</div>
-                            <div>CCL Sent</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #16a34a;">${stats.mention}</div>
-                            <div>Mention Letters</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #dc2626;">${stats.final}</div>
-                            <div>Final Letters</div>
-                        </div>
-                    </div>`;
-            }
-        };
-        
-        // ===== NAVIGATION =====
-        const switchTab = (tabName, event) => {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            
-            const tabElement = document.getElementById(tabName);
-            if (tabElement) tabElement.classList.add('active');
-            if (event?.target) event.target.classList.add('active');
-            
-            if (tabName === 'analytics') updateAnalytics();
-        };
-        
-        // ===== MODAL MANAGEMENT =====
-        const openModal = () => document.getElementById('addClientModal').style.display = 'block';
-        const closeModal = () => {
-            document.getElementById('addClientModal').style.display = 'none';
-            document.getElementById('addClientForm').reset();
-        };
-        
-        // ===== CLIENT MANAGEMENT =====
-        const addClient = (event) => {
-            event.preventDefault();
-            
-            const newClient = {
-                id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
-                name: document.getElementById('newClientName').value,
-                address: document.getElementById('newClientAddress').value,
-                matterNumber: document.getElementById('newMatterNumber').value,
-                court: document.getElementById('newCourt').value,
-                matterType: document.getElementById('newMatterType').value,
-                charges: document.getElementById('newCharges').value,
-                legalAid: document.getElementById('newLegalAid').value === 'Yes',
-                nextCourt: document.getElementById('newNextCourt').value,
-                status: 'Active',
-                ccl: false,
-                mention: false,
-                final: false,
-                letterHistory: []
-            };
-            
-            clients.push(newClient);
-            saveData();
-            updateUI();
-            closeModal();
-            alert('Client added successfully!');
-        };
-        
-        const selectClientForLetter = (clientId) => {
-            document.querySelector('.tab:nth-child(2)')?.click();
-            document.getElementById('clientSelect').value = clientId;
-            loadClientInfo();
-        };
-        
-        // ===== CDR FUNCTIONS =====
-        const loadCDRClientInfo = () => {
-            const clientId = parseInt(document.getElementById('cdrClientSelect').value);
-            const fields = ['cdrClientName', 'cdrFileNumber', 'cdrCourt', 'cdrOutcomeCourt'];
-            
-            if (!clientId) {
-                fields.forEach(f => document.getElementById(f).value = '');
-                return;
-            }
-            
-            const client = clients.find(c => c.id === clientId);
-            if (!client) return;
-            
-            document.getElementById('cdrClientName').value = client.name;
-            document.getElementById('cdrFileNumber').value = client.matterNumber;
-            document.getElementById('cdrCourt').value = client.court;
-            document.getElementById('cdrOutcomeCourt').value = client.court;
-            
-            if (client.nextCourt) {
-                document.getElementById('cdrCourtDate').value = client.nextCourt;
-            }
-        };
-        
-        const getAllocatedTo = () => {
-            const allocated = [];
-            document.querySelectorAll('input[id^="allocate_"]:checked').forEach(cb => allocated.push(cb.value));
-            return allocated.join(', ') || 'TBD';
-        };
-        
-        const getLetterAllocatedTo = () => {
-            const allocated = [];
-            document.querySelectorAll('input[id^="letter_allocate_"]:checked').forEach(cb => allocated.push(cb.value));
-            return allocated.join(', ') || 'TBD';
-        };
-        
-        const formatCDRText = (data) => {
-            return `** ** ** ** **COURT OUTCOME** ** ** **
-COURT: ${data.outcomeCourt}
-DATE: ${formatDate(data.outcomeDate)}
-CORAM: 
-CROWN: 
-START: ${data.startTime}
-FINISH: ${data.finishTime}
-
-**COURT DIARY REQUEST**
-COURT DATE: ${formatDate(data.courtDate)}
-SOLICITOR: ${data.solicitor}
-CLIENT: ${data.clientName}
-FILE NUMBER: ${data.fileNumber}
-REASON: ${data.reason}
-COURT: ${data.court}
-COURT TIME: ${data.courtTime}
-ALLOCATE TO: ${data.allocateTo}
-CLIENT EXCUSED: ${data.clientExcused ? 'Yes' : 'No'}
-FEE REMINDER: ${data.feeReminder || 'N/A'}`;
-        };
-        
-        const formatCDRHTML = (data) => {
-            const row = (label, value) => `
-                <tr>
-                    <td style="width: 30%; padding: 5px 10px; font-weight: bold;">${label}:</td>
-                    <td style="width: 70%; padding: 5px 10px;">${value || ''}</td>
-                </tr>`;
-            
-            return `
-            <div style="font-family: Arial, sans-serif; font-size: 10pt; color: black;">
-                <p style="text-align: center; font-weight: bold; margin: 20px 0;">COURT OUTCOME</p>
-                <table style="border-collapse: collapse; width: 100%; max-width: 650px;">
-                    ${row('COURT', data.outcomeCourt)}
-                    ${row('DATE', formatDate(data.outcomeDate))}
-                    ${row('CORAM', '')}
-                    ${row('CROWN', '')}
-                    ${row('START', data.startTime)}
-                    ${row('FINISH', data.finishTime)}
-                </table>
-                
-                <p style="text-align: center; font-weight: bold; margin: 20px 0;">COURT DIARY REQUEST</p>
-                <table style="border-collapse: collapse; width: 100%; max-width: 650px;">
-                    ${row('COURT DATE', formatDate(data.courtDate))}
-                    ${row('SOLICITOR', data.solicitor)}
-                    ${row('CLIENT', data.clientName)}
-                    ${row('FILE NUMBER', data.fileNumber)}
-                    ${row('REASON', data.reason)}
-                    ${row('COURT', data.court)}
-                    ${row('COURT TIME', data.courtTime)}
-                    ${row('ALLOCATE TO', data.allocateTo)}
-                    ${row('CLIENT EXCUSED', data.clientExcused ? 'Yes' : 'No')}
-                    ${row('FEE REMINDER', data.feeReminder)}
-                </table>
-            </div>`;
-        };
-        
-        const generateCDR = () => {
-            const cdrData = {
-                outcomeCourt: document.getElementById('cdrOutcomeCourt').value,
-                outcomeDate: document.getElementById('cdrOutcomeDate').value,
-                startTime: document.getElementById('cdrStartTime').value,
-                finishTime: document.getElementById('cdrFinishTime').value,
-                courtDate: document.getElementById('cdrCourtDate').value,
-                solicitor: document.getElementById('cdrSolicitor').value,
-                clientName: document.getElementById('cdrClientName').value,
-                fileNumber: document.getElementById('cdrFileNumber').value,
-                reason: document.getElementById('cdrReason').value,
-                court: document.getElementById('cdrCourt').value,
-                courtTime: document.getElementById('cdrCourtTime').value,
-                allocateTo: getAllocatedTo(),
-                clientExcused: document.getElementById('cdrClientExcused').checked,
-                feeReminder: document.getElementById('cdrFeeReminder').value
-            };
-            
-            currentCDRData = cdrData;
-            const outputDiv = document.getElementById('cdrOutput');
-            outputDiv.textContent = formatCDRText(cdrData);
-            outputDiv.style.display = 'block';
-        };
-        
-        const sendToZapier = (isCDROnly = false) => {
-            const statusDiv = document.getElementById(isCDROnly ? 'cdrZapierStatus' : 'zapierStatus');
-            
-            if (isCDROnly && !currentCDRData) {
-                alert('Please generate a CDR first');
-                return;
-            }
-            
-            if (!isCDROnly) {
-                const promptText = document.getElementById('promptOutput').textContent;
-                const letterType = document.getElementById('letterType').value;
-                
-                if (!promptText || !currentClient || !letterType) {
-                    alert('Please generate a prompt first');
-                    return;
-                }
-            }
-            
-            statusDiv.style.display = 'block';
-            statusDiv.style.backgroundColor = '#fef3c7';
-            statusDiv.style.color = '#92400e';
-            statusDiv.textContent = 'Sending to Zapier...';
-            
-            const hasCDR = isCDROnly || document.getElementById('generateCDRWithLetter')?.checked;
-            
-            const payload = {
-                type: isCDROnly ? 'CDR_ONLY' : (hasCDR ? 'LETTER_AND_CDR' : document.getElementById('letterType').value),
-                letterData: isCDROnly ? null : {
-                    letterType: document.getElementById('letterType').value,
-                    prompt: document.getElementById('promptOutput').textContent,
-                    clientName: currentClient.name,
-                    matterNumber: currentClient.matterNumber,
-                    court: currentClient.court,
-                    templateFileName: getTemplateFileName(document.getElementById('letterType').value)
-                },
-                cdrData: null,
-                hasLetter: !isCDROnly,
-                hasCDR: hasCDR
-            };
-            
-            if (hasCDR && currentCDRData) {
-                payload.cdrData = {
-                    ...currentCDRData,
-                    cdrText: formatCDRText(currentCDRData),
-                    cdrHTML: formatCDRHTML(currentCDRData)
-                };
-            }
-            
-            const formData = new FormData();
-            formData.append('data', JSON.stringify(payload));
-            
-            fetch('https://hooks.zapier.com/hooks/catch/19713185/u47xnci/', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (response.ok) {
-                    statusDiv.style.backgroundColor = '#d4edda';
-                    statusDiv.style.color = '#155724';
-                    statusDiv.textContent = '✓ Successfully sent to Zapier!';
-                    setTimeout(() => statusDiv.style.display = 'none', 3000);
-                } else {
-                    throw new Error('Failed to send');
-                }
-            })
-            .catch(error => {
-                statusDiv.style.backgroundColor = '#f8d7da';
-                statusDiv.style.color = '#721c24';
-                statusDiv.textContent = '✗ Failed to send to Zapier. Please try again.';
-                console.error('Zapier error:', error);
+        // Switch between tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
             });
-        };
-        
-        const sendCDRToZapier = () => sendToZapier(true);
-        
-        const clearCDRForm = () => {
-            if (confirm('Clear all CDR fields?')) {
-                const defaults = {
-                    cdrClientSelect: '',
-                    cdrOutcomeCourt: '',
-                    cdrOutcomeDate: '',
-                    cdrStartTime: '09:30',
-                    cdrFinishTime: '10:00',
-                    cdrCourtDate: '',
-                    cdrSolicitor: 'AAG',
-                    cdrClientName: '',
-                    cdrFileNumber: '',
-                    cdrReason: '',
-                    cdrCourt: '',
-                    cdrCourtTime: '09:30',
-                    cdrClientExcused: false,
-                    cdrFeeReminder: ''
-                };
-                
-                Object.entries(defaults).forEach(([id, value]) => {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        if (typeof value === 'boolean') el.checked = value;
-                        else el.value = value;
-                    }
-                });
-                
-                document.querySelectorAll('input[id^="allocate_"]').forEach(cb => cb.checked = false);
-                document.getElementById('cdrOutput').style.display = 'none';
-                currentCDRData = null;
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabName === 'analytics') {
+                updateAnalytics();
             }
-        };
+        }
         
-        // ===== LETTER GENERATION =====
-        const loadClientInfo = () => {
-            const clientId = parseInt(document.getElementById('clientSelect').value);
-            const section = document.getElementById('clientInfoSection');
-            
-            if (!clientId) {
-                section.style.display = 'none';
-                return;
-            }
-            
-            currentClient = clients.find(c => c.id === clientId);
-            if (!currentClient) return;
-            
-            section.style.display = 'block';
-            
-            document.getElementById('clientInfoGrid').innerHTML = `
-                ${['name:Client Name', 'address:Address', 'matterNumber:Matter Number', 'court:Court', 
-                   'matterType:Matter Type', 'charges:Charges', 'legalAid:Legal Aid', 'nextCourt:Next Court']
-                   .map(field => {
-                       const [key, label] = field.split(':');
-                       let value = currentClient[key];
-                       if (key === 'address' && !value) value = 'Not provided';
-                       if (key === 'legalAid') value = value ? 'Yes' : 'No';
-                       if (key === 'nextCourt') value = value ? formatDate(value) : 'TBD';
-                       return `<div class="info-item">
-                           <div class="info-label">${label}</div>
-                           <div class="info-value">${value || ''}</div>
-                       </div>`;
-                   }).join('')}`;
-            
-            const historyList = document.getElementById('letterHistoryList');
-            if (currentClient.letterHistory?.length > 0) {
-                historyList.innerHTML = currentClient.letterHistory.map(letter => `
-                    <div class="letter-item">
-                        <div>
-                            <strong>${letter.type}</strong> - ${formatDate(letter.date)}
-                            <br><small>${letter.notes || ''}</small>
-                        </div>
-                        <span class="status-badge status-completed">Sent</span>
-                    </div>
-                `).join('');
+        // Update database status indicator
+        function updateDatabaseStatus(connected) {
+            const status = document.getElementById('databaseStatus');
+            if (connected) {
+                status.textContent = `Database: Connected (${clients.length} clients)`;
+                status.className = 'database-status status-connected';
             } else {
-                historyList.innerHTML = '<p style="color: #6b7280; font-style: italic;">No letters sent yet</p>';
+                status.textContent = 'Database: Not Connected';
+                status.className = 'database-status status-disconnected';
             }
-        };
+        }
         
-        const updateLetterFields = () => {
-            const letterType = document.getElementById('letterType').value;
-            const dynamicFields = document.getElementById('dynamicFields');
-            const cdrSection = document.getElementById('cdrForLetterSection');
-            
-            if (!letterType || !currentClient) {
-                dynamicFields.innerHTML = '';
-                cdrSection.style.display = 'none';
-                return;
-            }
-            
-            cdrSection.style.display = 'block';
-            
-            const fieldGenerators = {
-                'CCL': getCCLFields,
-                'Mention': getMentionFields,
-                'Final': getFinalFields,
-                'FeeReestimate': getFeeReestimateFields
-            };
-            
-            dynamicFields.innerHTML = fieldGenerators[letterType]?.() || '';
-            
-            if (letterType === 'CCL') {
-                toggleLegalAidFields();
-                togglePleaOptions();
-            }
-        };
-        
-        const toggleCDRFields = () => {
-            document.getElementById('cdrFieldsInLetter').style.display = 
-                document.getElementById('generateCDRWithLetter').checked ? 'block' : 'none';
-        };
-        
-        const generatePrompt = () => {
-            const letterType = document.getElementById('letterType').value;
-            
-            if (!letterType || !currentClient) {
-                alert('Please select a client and letter type');
-                return;
-            }
-            
-            let prompt = `Generate ${letterType} letter for:\n`;
-            prompt += `Client: ${currentClient.name}\n`;
-            prompt += `Matter: ${currentClient.matterNumber}\n`;
-            prompt += `Court: ${currentClient.court}\n`;
-            prompt += `Charges: ${currentClient.charges}\n\n`;
-            prompt += `[Letter specific content would be generated here based on form inputs]\n`;
-            
-            let cdrData = null;
-            
-            if (document.getElementById('generateCDRWithLetter')?.checked) {
-                const nextCourtDate = document.getElementById('nextCourtDate')?.value;
-                if (nextCourtDate) {
-                    cdrData = {
-                        outcomeCourt: currentClient.court,
-                        outcomeDate: getTodayDate(),
-                        startTime: '09:30',
-                        finishTime: '10:00',
-                        courtDate: nextCourtDate,
-                        solicitor: 'AAG',
-                        clientName: currentClient.name,
-                        fileNumber: currentClient.matterNumber,
-                        reason: document.getElementById('letterCDRReason')?.value || 'Mention',
-                        court: currentClient.court,
-                        courtTime: '09:30',
-                        allocateTo: getLetterAllocatedTo(),
-                        clientExcused: document.getElementById('letterCDRClientExcused')?.checked || false,
-                        feeReminder: ''
-                    };
-                }
-            }
-            
-            if (cdrData) {
-                prompt += '\n\n--- CDR ALSO GENERATED ---\n';
-                prompt += formatCDRText(cdrData);
-                currentCDRData = cdrData;
-            }
-            
-            const outputDiv = document.getElementById('promptOutput');
-            outputDiv.textContent = prompt;
-            outputDiv.style.display = 'block';
-            
-            if (!currentClient.letterHistory) currentClient.letterHistory = [];
-            currentClient.letterHistory.push({
-                type: letterType,
-                date: new Date().toISOString().slice(0,10),
-                notes: `Generated ${letterType} prompt${cdrData ? ' with CDR' : ''}`
-            });
-            
-            currentClient[letterType.toLowerCase().replace('reestimate', '')] = true;
-            
-            saveData();
-            updateUI();
-        };
-        
-        const copyPrompt = () => {
-            const promptText = document.getElementById('promptOutput').textContent;
-            if (!promptText) {
-                alert('Please generate a prompt first');
-                return;
-            }
-            
-            navigator.clipboard.writeText(promptText).then(() => {
-                alert('Prompt copied to clipboard!');
-            }).catch(() => {
-                const textArea = document.createElement('textarea');
-                textArea.value = promptText;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                alert('Prompt copied to clipboard!');
-            });
-        };
-        
-        const clearForm = () => {
-            if (confirm('Clear all fields?')) {
-                document.getElementById('letterType').value = '';
-                document.getElementById('dynamicFields').innerHTML = '';
-                document.getElementById('promptOutput').style.display = 'none';
-            }
-        };
-        
-        const updateExcelRecord = () => {
-            const letterType = document.getElementById('letterType').value;
-            
-            if (!currentClient || !letterType) {
-                alert('Please select a client and generate a letter first');
-                return;
-            }
-            
-            const clientIndex = clients.findIndex(c => c.id === currentClient.id);
-            if (clientIndex !== -1) {
-                const typeMap = {'CCL': 'ccl', 'Mention': 'mention', 'Final': 'final'};
-                if (typeMap[letterType]) clients[clientIndex][typeMap[letterType]] = true;
-                
-                clients[clientIndex].lastUpdated = new Date().toLocaleDateString('en-AU');
-                
-                saveData();
-                updateUI();
-                exportToExcel();
-                
-                alert(`Excel database updated!\n${letterType} marked as sent for ${currentClient.name}`);
-            }
-        };
-        
-        // ===== EXCEL FUNCTIONS =====
-        const loadExcelFile = () => {
+        // Load Excel file
+        function loadExcelFile() {
             const fileInput = document.getElementById('excelFile');
             const file = fileInput.files[0];
+            
             if (!file) return;
             
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     const jsonData = XLSX.utils.sheet_to_json(firstSheet);
                     
+                    // Convert Excel data to our format
                     clients = jsonData.map((row, index) => ({
                         id: index + 1,
                         name: row['Client Name'] || '',
@@ -681,18 +1012,19 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                     alert(`Successfully loaded ${clients.length} clients from Excel`);
                 } catch (error) {
                     alert('Error loading Excel file: ' + error.message);
-                    console.error('Excel loading error:', error);
                 }
             };
             reader.readAsArrayBuffer(file);
-        };
+        }
         
-        const exportToExcel = () => {
+        // Export to Excel
+        function exportToExcel() {
             if (clients.length === 0) {
                 alert('No data to export');
                 return;
             }
             
+            // Prepare data for export
             const exportData = clients.map(client => ({
                 'Client Name': client.name,
                 'Address': client.address,
@@ -714,10 +1046,167 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
             const ws = XLSX.utils.json_to_sheet(exportData);
             XLSX.utils.book_append_sheet(wb, ws, 'Clients');
             XLSX.writeFile(wb, `legal_clients_${new Date().toISOString().slice(0,10)}.xlsx`);
-        };
+        }
         
-        // ===== LETTER FIELD GENERATORS =====
-        const getCCLFields = () => {
+        // Load client table
+        function loadClientTable() {
+            const tbody = document.getElementById('clientTableBody');
+            
+            if (clients.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
+                            No clients loaded. Please upload an Excel database or add clients manually.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = clients.map(client => `
+                <tr>
+                    <td><strong>${client.name}</strong></td>
+                    <td>${client.matterNumber}</td>
+                    <td>${client.court}</td>
+                    <td>${client.charges}</td>
+                    <td><span class="status-badge status-${client.status.toLowerCase()}">${client.status}</span></td>
+                    <td>${client.ccl ? '✅' : '❌'}</td>
+                    <td>${client.mention ? '✅' : '❌'}</td>
+                    <td>${client.final ? '✅' : '❌'}</td>
+                    <td>${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</td>
+                    <td>
+                        <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="selectClientForLetter(${client.id})">Generate Letter</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // Load client select dropdown
+        function loadClientSelect() {
+            const select = document.getElementById('clientSelect');
+            select.innerHTML = '<option value="">-- Select a Client --</option>';
+            
+            clients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client.id;
+                option.textContent = `${client.name} (${client.matterNumber})`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Select client from master list for letter generation
+        function selectClientForLetter(clientId) {
+            switchTab('generator');
+            document.getElementById('clientSelect').value = clientId;
+            loadClientInfo();
+        }
+        
+        // Load client information
+        function loadClientInfo() {
+            const clientId = parseInt(document.getElementById('clientSelect').value);
+            const clientInfoSection = document.getElementById('clientInfoSection');
+            
+            if (!clientId) {
+                clientInfoSection.style.display = 'none';
+                return;
+            }
+            
+            currentClient = clients.find(c => c.id === clientId);
+            if (!currentClient) return;
+            
+            clientInfoSection.style.display = 'block';
+            
+            // Populate client info grid
+            document.getElementById('clientInfoGrid').innerHTML = `
+                <div class="info-item">
+                    <div class="info-label">Client Name</div>
+                    <div class="info-value">${currentClient.name}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Address</div>
+                    <div class="info-value">${currentClient.address || 'Not provided'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Matter Number</div>
+                    <div class="info-value">${currentClient.matterNumber}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Court</div>
+                    <div class="info-value">${currentClient.court}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Matter Type</div>
+                    <div class="info-value">${currentClient.matterType}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Charges</div>
+                    <div class="info-value">${currentClient.charges}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Legal Aid</div>
+                    <div class="info-value">${currentClient.legalAid ? 'Yes' : 'No'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Next Court</div>
+                    <div class="info-value">${currentClient.nextCourt ? formatDate(currentClient.nextCourt) : 'TBD'}</div>
+                </div>
+            `;
+            
+            // Populate letter history
+            const historyList = document.getElementById('letterHistoryList');
+            if (currentClient.letterHistory && currentClient.letterHistory.length > 0) {
+                historyList.innerHTML = currentClient.letterHistory.map(letter => `
+                    <div class="letter-item">
+                        <div>
+                            <strong>${letter.type}</strong> - ${formatDate(letter.date)}
+                            <br><small>${letter.notes || ''}</small>
+                        </div>
+                        <span class="status-badge status-completed">Sent</span>
+                    </div>
+                `).join('');
+            } else {
+                historyList.innerHTML = '<p style="color: #6b7280; font-style: italic;">No letters sent yet</p>';
+            }
+        }
+        
+        // Update letter fields based on type
+        function updateLetterFields() {
+            const letterType = document.getElementById('letterType').value;
+            const dynamicFields = document.getElementById('dynamicFields');
+            
+            if (!letterType || !currentClient) {
+                dynamicFields.innerHTML = '';
+                return;
+            }
+            
+            let fieldsHTML = '';
+            
+            switch(letterType) {
+                case 'CCL':
+                    fieldsHTML = getCCLFields();
+                    break;
+                case 'Mention':
+                    fieldsHTML = getMentionFields();
+                    break;
+                case 'Final':
+                    fieldsHTML = getFinalFields();
+                    break;
+                case 'FeeReestimate':
+                    fieldsHTML = getFeeReestimateFields();
+                    break;
+            }
+            
+            dynamicFields.innerHTML = fieldsHTML;
+            
+            // Initialize any conditional logic
+            if (letterType === 'CCL') {
+                toggleLegalAidFields();
+                togglePleaOptions();
+            }
+        }
+        
+        // Get CCL specific fields
+        function getCCLFields() {
             return `
                 <div class="section">
                     <div class="section-title">Contact Details</div>
@@ -860,8 +1349,8 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                         <label for="legalAidStatus">Legal Aid?*</label>
                         <select id="legalAidStatus" onchange="toggleLegalAidFields()" required>
                             <option value="">Select</option>
-                            <option value="Yes" ${currentClient && currentClient.legalAid ? 'selected' : ''}>Yes</option>
-                            <option value="No" ${currentClient && !currentClient.legalAid ? 'selected' : ''}>No</option>
+                            <option value="Yes" ${currentClient.legalAid ? 'selected' : ''}>Yes</option>
+                            <option value="No" ${!currentClient.legalAid ? 'selected' : ''}>No</option>
                         </select>
                     </div>
                     
@@ -902,7 +1391,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                             <option value="">Select Plea</option>
                             <option value="Guilty">Guilty</option>
                             <option value="Not Guilty">Not Guilty</option>
-                            ${currentClient && currentClient.matterType === 'Criminal - Indictable' ? '<option value="No plea yet (indictable)">No plea yet (indictable)</option>' : ''}
+                            ${currentClient.matterType === 'Criminal - Indictable' ? '<option value="No plea yet (indictable)">No plea yet (indictable)</option>' : ''}
                         </select>
                     </div>
                     
@@ -913,7 +1402,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                     
                     <div class="form-group">
                         <label for="nextCourtDate">Next Court Date</label>
-                        <input type="date" id="nextCourtDate" value="${currentClient && currentClient.nextCourt ? currentClient.nextCourt : ''}">
+                        <input type="date" id="nextCourtDate" value="${currentClient.nextCourt || ''}">
                     </div>
                     
                     <div class="form-group">
@@ -1080,9 +1569,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                     </div>
                 </div>
             `;
-        };
+        }
         
-        const getMentionFields = () => {
+        // Get Mention Letter fields
+        function getMentionFields() {
             return `
                 <div class="section">
                     <div class="section-title">Court Appearance Details</div>
@@ -1183,9 +1673,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                     </div>
                 </div>
             `;
-        };
+        }
         
-        const getFinalFields = () => {
+        // Get Final Letter fields
+        function getFinalFields() {
             return `
                 <div class="section">
                     <div class="section-title">Final Court Appearance</div>
@@ -1378,9 +1869,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                     </div>
                 </div>
             `;
-        };
+        }
         
-        const getFeeReestimateFields = () => {
+        // Get Fee Re-estimate fields
+        function getFeeReestimateFields() {
             return `
                 <div class="section">
                     <div class="section-title">Conference Details</div>
@@ -1481,853 +1973,726 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                     </div>
                 </div>
             `;
-        };
+        }
         
-        // ===== TOGGLE FUNCTIONS =====
-        const toggleLegalAidFields = () => {
-            const status = document.getElementById('legalAidStatus')?.value;
-            const legalAidDetails = document.getElementById('legalAidDetails');
-            const privateDetails = document.getElementById('privateDetails');
-            
-            if (legalAidDetails) legalAidDetails.style.display = status === 'Yes' ? 'block' : 'none';
-            if (privateDetails) privateDetails.style.display = status === 'No' ? 'block' : 'none';
-        };
+        // Toggle functions
+        function toggleLegalAidFields() {
+            const legalAid = document.getElementById('legalAidStatus').value;
+            document.getElementById('legalAidDetails').style.display = legalAid === 'Yes' ? 'block' : 'none';
+            document.getElementById('privateDetails').style.display = legalAid === 'No' ? 'block' : 'none';
+        }
         
-        const toggleDepositAmount = () => {
-            const paid = document.getElementById('depositPaid')?.value;
-            const details = document.getElementById('depositDetails');
-            if (details) details.style.display = paid === 'Yes' ? 'block' : 'none';
-        };
+        function toggleDepositAmount() {
+            const depositPaid = document.getElementById('depositPaid').value;
+            document.getElementById('depositDetails').style.display = depositPaid === 'Yes' ? 'block' : 'none';
+        }
         
-        const togglePleaOptions = () => {
-            const plea = document.getElementById('plea')?.value;
+        function togglePleaOptions() {
+            const plea = document.getElementById('plea').value;
             const materials = document.getElementById('sentenceMaterials');
-            if (materials) materials.style.display = plea === 'Guilty' ? 'block' : 'none';
-        };
+            if (materials) {
+                materials.style.display = plea === 'Guilty' ? 'block' : 'none';
+            }
+        }
         
-        const toggleADVOFields = () => {
-            const advoType = document.getElementById('advoType')?.value;
-            const details = document.getElementById('advoDetails');
-            if (details) details.style.display = advoType ? 'block' : 'none';
-        };
+        function toggleADVOFields() {
+            const advoType = document.getElementById('advoType').value;
+            document.getElementById('advoDetails').style.display = advoType ? 'block' : 'none';
+        }
         
-        const toggleBailFields = () => {
-            const hasBail = document.getElementById('hasBail')?.value;
-            const details = document.getElementById('bailDetails');
-            if (details) details.style.display = hasBail === 'Yes' ? 'block' : 'none';
-        };
+        function toggleBailFields() {
+            const hasBail = document.getElementById('hasBail').value;
+            document.getElementById('bailDetails').style.display = hasBail === 'Yes' ? 'block' : 'none';
+        }
         
-        const toggleFinalADVO = () => {
-            const finalADVO = document.getElementById('finalADVO')?.value;
-            const details = document.getElementById('finalADVODetails');
-            if (details) details.style.display = finalADVO === 'Yes' ? 'block' : 'none';
-        };
+        function toggleFinalADVO() {
+            const finalADVO = document.getElementById('finalADVO').value;
+            document.getElementById('finalADVODetails').style.display = finalADVO === 'Yes' ? 'block' : 'none';
+        }
         
-        const checkPenaltyType = () => {
-            const outcome = document.getElementById('finalOutcome')?.value || document.getElementById('penalty')?.value;
+        function checkPenaltyType() {
+            const penalty = document.getElementById('penalty').value;
             const details = document.getElementById('penaltyDetails');
             const conditions = document.getElementById('conditionsField');
             
-            if (details) {
-                const showDetails = outcome && outcome !== 'Not Guilty' && outcome !== 'Charges dismissed';
-                details.style.display = showDetails ? 'block' : 'none';
-                
-                if (conditions) {
-                    conditions.style.display = (outcome?.includes('CRO') || outcome?.includes('CCO') || 
-                                               outcome?.includes('ICO')) ? 'block' : 'none';
+            if (penalty && penalty !== 'Not Guilty' && penalty !== 'Charges dismissed') {
+                details.style.display = 'block';
+                if (penalty.includes('CRO') || penalty.includes('CCO') || penalty.includes('ICO')) {
+                    conditions.style.display = 'block';
+                } else {
+                    conditions.style.display = 'none';
+                }
+            } else {
+                details.style.display = 'none';
+            }
+        }
+        
+        // Calculate total estimate for fee re-estimate
+        document.addEventListener('input', function(e) {
+            if (e.target.id === 'originalEstimate' || e.target.id === 'additionalAmount') {
+                const original = parseFloat(document.getElementById('originalEstimate').value) || 0;
+                const additional = parseFloat(document.getElementById('additionalAmount').value) || 0;
+                const totalSpan = document.getElementById('totalEstimate');
+                if (totalSpan) {
+                    totalSpan.textContent = (original + additional).toFixed(2);
                 }
             }
-        };
-        
-        // ===== INITIALIZATION =====
-        document.addEventListener('DOMContentLoaded', () => {
-            loadSavedData();
-            updateUI();
         });
         
-        window.onclick = (event) => {
+        // Generate prompt
+        function generatePrompt() {
+            const letterType = document.getElementById('letterType').value;
+            
+            if (!letterType || !currentClient) {
+                alert('Please select a client and letter type');
+                return;
+            }
+            
+            let prompt = '';
+            
+            switch(letterType) {
+                case 'CCL':
+                    prompt = generateCCLPrompt();
+                    break;
+                case 'Mention':
+                    prompt = generateMentionPrompt();
+                    break;
+                case 'Final':
+                    prompt = generateFinalPrompt();
+                    break;
+                case 'FeeReestimate':
+                    prompt = generateFeeReestimatePrompt();
+                    break;
+            }
+            
+            const outputDiv = document.getElementById('promptOutput');
+            outputDiv.textContent = prompt;
+            outputDiv.style.display = 'block';
+            
+            // Update letter history
+            if (!currentClient.letterHistory) currentClient.letterHistory = [];
+            currentClient.letterHistory.push({
+                type: letterType,
+                date: new Date().toISOString().slice(0,10),
+                notes: `Generated ${letterType} prompt`
+            });
+            
+            // Update letter sent status
+            switch(letterType) {
+                case 'CCL':
+                    currentClient.ccl = true;
+                    break;
+                case 'Mention':
+                    currentClient.mention = true;
+                    break;
+                case 'Final':
+                    currentClient.final = true;
+                    break;
+            }
+            
+            saveData();
+            updateUI();
+        }
+        
+        // Generate CCL Prompt (matches your TXT)
+        function generateCCLPrompt() {
+            const contactMethod = document.getElementById('contactMethod').value;
+            const contactDate = document.getElementById('contactDate').value;
+            const charges = getSelectedCharges();
+            const plea = document.getElementById('plea').value;
+            const legalAid = document.getElementById('legalAidStatus').value;
+            const clientInstructions = document.getElementById('clientInstructions').value;
+            const nextCourtDate = document.getElementById('nextCourtDate').value;
+            const requiredAttend = document.getElementById('requiredAttend').value;
+            
+            let prompt = `Using the CCL template, draft a letter with this information:\n\n`;
+            prompt += `CLIENT: ${currentClient.name}\n`;
+            prompt += `ADDRESS: ${currentClient.address}\n`;
+            prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
+            
+            prompt += `Contact: ${contactMethod} on ${formatDate(contactDate)}\n\n`;
+            
+            prompt += `COURT: ${currentClient.court}\n`;
+            prompt += `MATTER TYPE: ${currentClient.matterType}\n`;
+            prompt += `CHARGES: ${charges}\n\n`;
+            
+            // Legal Aid status
+            if (legalAid === 'Yes') {
+                prompt += `LEGAL AID: Yes`;
+                const contribution = document.getElementById('contribution').value;
+                if (contribution) {
+                    prompt += ` - Contribution: ${contribution}`;
+                }
+            } else {
+                prompt += `PRIVATE CLIENT - Estimate: ${document.getElementById('estimate').value || 'TBD'}`;
+                if (document.getElementById('depositPaid').value === 'Yes') {
+                    prompt += ` (deposit of ${document.getElementById('depositAmount').value} already paid)`;
+                }
+            }
+            prompt += `\n\n`;
+            
+            prompt += `PLEA: ${plea}\n`;
+            prompt += `CLIENT INSTRUCTIONS: ${clientInstructions}\n`;
+            
+            if (nextCourtDate) {
+                prompt += `NEXT COURT DATE: ${formatDate(nextCourtDate)}`;
+                if (requiredAttend) {
+                    prompt += ` - Client ${requiredAttend === 'Yes' ? 'required' : 'not required'} to attend`;
+                }
+                prompt += `\n`;
+            }
+            
+            // Sentence materials (if guilty plea)
+            if (plea === 'Guilty') {
+                const materials = getSelectedMaterials();
+                if (materials) {
+                    prompt += `\nSENTENCE MATERIALS DISCUSSED: ${materials}\n`;
+                }
+            }
+            
+            // ADVO details
+            const advoType = document.getElementById('advoType').value;
+            if (advoType) {
+                prompt += `\nADVO: ${advoType} for ${document.getElementById('pinop').value}`;
+                prompt += ` (${document.getElementById('advoDuration').value})`;
+                const conditions = getADVOConditions();
+                prompt += `\nCONDITIONS: ${conditions}\n`;
+            }
+            
+            // Bail conditions
+            if (document.getElementById('hasBail').value === 'Yes') {
+                const bailConditions = getBailConditions();
+                if (bailConditions) {
+                    prompt += `\nBAIL CONDITIONS: ${bailConditions}\n`;
+                }
+            }
+            
+            // Additional information
+            const additionalInfo = document.getElementById('additionalInfo').value;
+            if (additionalInfo) {
+                prompt += `\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
+            }
+            
+            return prompt;
+        }
+        
+        // Generate Mention Prompt
+        function generateMentionPrompt() {
+            const courtDate = document.getElementById('courtDate').value;
+            const whoAppeared = document.getElementById('whoAppeared').value;
+            const listedFor = document.getElementById('listedFor').value;
+            const whatOccurred = document.getElementById('whatOccurred').value;
+            const nextCourtDate = document.getElementById('nextCourtDate').value;
+            const nextListedFor = document.getElementById('nextListedFor').value;
+            const requiredAttend = document.getElementById('requiredAttend').value;
+            
+            let prompt = `Using the Mention Letter template, draft a letter with this information:\n\n`;
+            prompt += `CLIENT: ${currentClient.name}\n`;
+            prompt += `ADDRESS: ${currentClient.address}\n`;
+            prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
+            
+            prompt += `COURT: ${currentClient.court}\n`;
+            prompt += `Date of appearance: ${formatDate(courtDate)}\n`;
+            prompt += `Listed for: ${listedFor}\n`;
+            prompt += `Who appeared: ${whoAppeared}\n\n`;
+            
+            prompt += `WHAT OCCURRED: ${whatOccurred}\n\n`;
+            
+            if (nextCourtDate) {
+                prompt += `NEXT DATE: ${formatDate(nextCourtDate)}`;
+                if (nextListedFor) {
+                    prompt += ` for ${nextListedFor}`;
+                }
+                prompt += `\n`;
+                if (requiredAttend) {
+                    prompt += `Client ${requiredAttend === 'Yes' ? 'required' : 'not required'} to attend\n`;
+                }
+            }
+            
+            // Billing info if applicable
+            const interimInvoice = document.getElementById('interimInvoice').value;
+            if (interimInvoice) {
+                const status = document.getElementById('invoiceStatus').value;
+                prompt += `\nInterim invoice amount: ${interimInvoice}`;
+                if (status) {
+                    prompt += ` (${status.toLowerCase()})`;
+                }
+                prompt += `\n`;
+            }
+            
+            const additionalInfo = document.getElementById('additionalInfo').value;
+            if (additionalInfo) {
+                prompt += `\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
+            }
+            
+            return prompt;
+        }
+        
+        // Generate Final Prompt
+        function generateFinalPrompt() {
+            const courtDate = document.getElementById('courtDate').value;
+            const finalListedFor = document.getElementById('finalListedFor').value;
+            const whoAppeared = document.getElementById('whoAppeared').value;
+            const outcome = document.getElementById('outcome').value;
+            const penalty = document.getElementById('penalty').value;
+            const penaltyLength = document.getElementById('penaltyLength')?.value;
+            const appealProspects = document.getElementById('appealProspects').value;
+            
+            let prompt = `Using the Final Letter template, draft a letter with this information:\n\n`;
+            prompt += `CLIENT: ${currentClient.name}\n`;
+            prompt += `ADDRESS: ${currentClient.address}\n`;
+            prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
+            
+            prompt += `COURT: ${currentClient.court}\n`;
+            prompt += `Date: ${formatDate(courtDate)}\n`;
+            prompt += `Matter was listed for: ${finalListedFor}\n\n`;
+            
+            prompt += `CHARGES: ${currentClient.charges}\n\n`;
+            
+            if (whoAppeared === 'Counsel appeared') {
+                prompt += `REPRESENTATION: Counsel appeared (need name)\n`;
+            } else {
+                prompt += `REPRESENTATION: I appeared\n`;
+            }
+            
+            prompt += `\nOUTCOME: ${outcome}\n`;
+            
+            if (penalty) {
+                prompt += `\nPENALTY: ${penalty}`;
+                if (penaltyLength) {
+                    prompt += ` - ${penaltyLength}`;
+                }
+                prompt += `\n`;
+                
+                const conditions = document.getElementById('penaltyConditions')?.value;
+                if (conditions) {
+                    prompt += `CONDITIONS: ${conditions}\n`;
+                }
+            }
+            
+            // License disqualification
+            const license = document.getElementById('licenseDisqualification').value;
+            if (license) {
+                prompt += `\nLICENSE DISQUALIFICATION: ${license}\n`;
+                const interlock = document.getElementById('interlockOrder').value;
+                if (interlock) {
+                    prompt += `INTERLOCK ORDER: ${interlock}\n`;
+                }
+            }
+            
+            // ADVO if final
+            if (document.getElementById('finalADVO').value === 'Yes') {
+                const pinop = document.getElementById('pinop').value;
+                const duration = document.getElementById('advoDuration').value;
+                const conditions = getFinalADVOConditions();
+                prompt += `\nADVO made final for ${pinop} (${duration})\n`;
+                prompt += `CONDITIONS: ${conditions}\n`;
+            }
+            
+            prompt += `\nAPPEAL PROSPECTS: ${appealProspects}\n`;
+            
+            // Billing
+            if (currentClient.legalAid) {
+                prompt += `\nLEGAL AID MATTER`;
+                if (currentClient.contribution) {
+                    prompt += ` - Outstanding contribution: ${currentClient.contribution}`;
+                }
+            } else {
+                const finalInvoice = document.getElementById('finalInvoiceAmount').value;
+                const outstanding = document.getElementById('outstandingAmount').value;
+                prompt += `\nPRIVATE MATTER`;
+                if (finalInvoice) {
+                    prompt += ` - Final invoice: ${finalInvoice}`;
+                }
+                if (outstanding) {
+                    prompt += ` - Outstanding: ${outstanding}`;
+                }
+            }
+            
+            const additionalInfo = document.getElementById('additionalInfo').value;
+            if (additionalInfo) {
+                prompt += `\n\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
+            }
+            
+            return prompt;
+        }
+        
+        // Generate Fee Re-estimate Prompt
+        function generateFeeReestimatePrompt() {
+            const conferenceDate = document.getElementById('conferenceDate').value;
+            const conferenceType = document.getElementById('conferenceType').value;
+            const originalEstimate = document.getElementById('originalEstimate').value;
+            const additionalAmount = document.getElementById('additionalAmount').value;
+            const reasonIncrease = document.getElementById('reasonIncrease').value;
+            const nextCourtDate = document.getElementById('nextCourtDate').value;
+            const nextListedFor = document.getElementById('nextListedFor').value;
+            
+            let prompt = `Using the Fee Re-estimate Letter template, draft a letter with this information:\n\n`;
+            prompt += `CLIENT: ${currentClient.name}\n`;
+            prompt += `ADDRESS: ${currentClient.address}\n`;
+            prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
+            
+            prompt += `Conference date: ${formatDate(conferenceDate)}\n`;
+            prompt += `Conference type: ${conferenceType}\n\n`;
+            
+            prompt += `COURT: ${currentClient.court}\n`;
+            
+            if (nextCourtDate) {
+                prompt += `Next court date: ${formatDate(nextCourtDate)}`;
+                if (nextListedFor) {
+                    prompt += ` for ${nextListedFor}`;
+                }
+                prompt += `\n`;
+            }
+            
+            const total = (parseFloat(originalEstimate) || 0) + (parseFloat(additionalAmount) || 0);
+            prompt += `\nOriginal estimate: ${originalEstimate}\n`;
+            prompt += `Additional amount: ${additionalAmount}\n`;
+            prompt += `New total estimate: ${total}\n`;
+            prompt += `Reason for increase: ${reasonIncrease}\n`;
+            
+            // Matter progress
+            const progress = document.getElementById('matterProgress').value;
+            if (progress) {
+                prompt += `\nMatter progress: ${progress}\n`;
+            }
+            
+            // Invoice status
+            const interimAmount = document.getElementById('interimInvoiceAmount').value;
+            if (interimAmount) {
+                const status = document.getElementById('interimStatus').value;
+                prompt += `\nInterim invoice: ${interimAmount}`;
+                if (status) {
+                    prompt += ` - ${status}`;
+                }
+                prompt += `\n`;
+            }
+            
+            // Trust deposit
+            const trustDeposit = document.getElementById('trustDeposit').value;
+            if (trustDeposit) {
+                prompt += `Trust deposit required: ${trustDeposit}\n`;
+            }
+            
+            if (currentClient.matterType.includes('Criminal')) {
+                prompt += `\nNote: This is a criminal matter (use criminal variable list in paragraph 27)\n`;
+            }
+            
+            const additionalInfo = document.getElementById('additionalInfo').value;
+            if (additionalInfo) {
+                prompt += `\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
+            }
+            
+            return prompt;
+        }
+        
+        // Helper functions for selections
+        function getSelectedCharges() {
+            const charges = [];
+            document.querySelectorAll('input[type="checkbox"][id^="charge_"]:checked').forEach(cb => {
+                charges.push(cb.value);
+            });
+            
+            const additional = document.getElementById('additionalCharges')?.value;
+            if (additional) charges.push(additional);
+            
+            const counts = document.getElementById('counts')?.value;
+            let chargeString = charges.length > 0 ? charges.join(', ') : currentClient.charges;
+            
+            if (counts && counts > 1) {
+                chargeString += ` (${counts} counts)`;
+            }
+            
+            return chargeString;
+        }
+        
+        function getSelectedMaterials() {
+            const materials = [];
+            document.querySelectorAll('input[type="checkbox"][id^="mat_"]:checked').forEach(cb => {
+                materials.push(cb.value);
+            });
+            return materials.join(', ');
+        }
+        
+        function getADVOConditions() {
+            const conditions = ['1 (mandatory)'];
+            document.querySelectorAll('input[type="checkbox"][id^="advo_"]:checked').forEach(cb => {
+                conditions.push(cb.value);
+            });
+            return conditions.join(', ');
+        }
+        
+        function getFinalADVOConditions() {
+            const conditions = ['1 (mandatory)'];
+            document.querySelectorAll('input[type="checkbox"][id^="final_advo_"]:checked').forEach(cb => {
+                conditions.push(cb.value);
+            });
+            return conditions.join(', ');
+        }
+        
+        function getBailConditions() {
+            const select = document.getElementById('bailConditions');
+            const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+            
+            const additional = document.getElementById('additionalBail')?.value;
+            if (additional) selected.push(additional);
+            
+            return selected.join(', ');
+        }
+        
+        // Copy prompt to clipboard
+        function copyPrompt() {
+            const promptText = document.getElementById('promptOutput').textContent;
+            if (!promptText) {
+                alert('Please generate a prompt first');
+                return;
+            }
+            
+            navigator.clipboard.writeText(promptText).then(() => {
+                alert('Prompt copied to clipboard!');
+            }).catch(err => {
+                // Fallback
+                const textArea = document.createElement('textarea');
+                textArea.value = promptText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Prompt copied to clipboard!');
+            });
+        }
+        
+        // Clear form
+        function clearForm() {
+            if (confirm('Clear all fields?')) {
+                document.getElementById('letterType').value = '';
+                document.getElementById('dynamicFields').innerHTML = '';
+                document.getElementById('promptOutput').style.display = 'none';
+            }
+        }
+        
+        // Send to Zapier function
+        function sendToZapier() {
+            const promptText = document.getElementById('promptOutput').textContent;
+            const letterType = document.getElementById('letterType').value;
+            
+            if (!promptText || !currentClient || !letterType) {
+                alert('Please generate a prompt first');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('zapierStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.style.backgroundColor = '#fef3c7';
+            statusDiv.style.color = '#92400e';
+            statusDiv.textContent = 'Sending to Zapier...';
+            
+            // Simplified payload for Zapier workflow
+            const payload = {
+                letterType: letterType,
+                prompt: promptText,
+                clientName: currentClient.name,
+                matterNumber: currentClient.matterNumber,
+                court: currentClient.court,
+                templateFileName: getTemplateFileName(letterType)
+            };
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('data', JSON.stringify(payload));
+            
+            fetch('https://hooks.zapier.com/hooks/catch/19713185/u4w2uc2/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    statusDiv.style.backgroundColor = '#d4edda';
+                    statusDiv.style.color = '#155724';
+                    statusDiv.textContent = '✓ Successfully sent to Zapier!';
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 3000);
+                } else {
+                    throw new Error('Failed to send');
+                }
+            })
+            .catch(error => {
+                statusDiv.style.backgroundColor = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.textContent = '✗ Failed to send to Zapier. Please try again.';
+                console.error('Zapier error:', error);
+            });
+        }
+        
+        // Helper function to get template file name
+        function getTemplateFileName(letterType) {
+            const templateMap = {
+                'CCL': 'CCL_Template.docx',
+                'Mention': 'Mention_Template.docx',
+                'Final': 'Final_Template.docx',
+                'FeeReestimate': 'FeeReestimate_Template.docx'
+            };
+            return templateMap[letterType] || 'Template.docx';
+        }
+
+        // Update Excel record function
+        function updateExcelRecord() {
+            const letterType = document.getElementById('letterType').value;
+            
+            if (!currentClient || !letterType) {
+                alert('Please select a client and generate a letter first');
+                return;
+            }
+            
+            // Update the client record
+            const clientIndex = clients.findIndex(c => c.id === currentClient.id);
+            if (clientIndex !== -1) {
+                // Update letter sent status
+                switch(letterType) {
+                    case 'CCL':
+                        clients[clientIndex].ccl = true;
+                        break;
+                    case 'Mention':
+                        clients[clientIndex].mention = true;
+                        break;
+                    case 'Final':
+                        clients[clientIndex].final = true;
+                        break;
+                }
+                
+                // Update last updated date
+                clients[clientIndex].lastUpdated = new Date().toLocaleDateString('en-AU');
+                
+                // Save to localStorage
+                saveData();
+                
+                // Update UI
+                updateUI();
+                
+                // Export to Excel automatically
+                exportToExcel();
+                
+                alert(`Excel database updated!\n${letterType} marked as sent for ${currentClient.name}`);
+            }
+        }
+        
+        // Analytics functions
+        function updateAnalytics() {
+            document.getElementById('totalMatters').textContent = clients.length;
+            document.getElementById('activeMatters').textContent = clients.filter(c => c.status === 'Active').length;
+            
+            // Count pending letters (clients without CCL)
+            const pendingLetters = clients.filter(c => !c.ccl).length;
+            document.getElementById('pendingLetters').textContent = pendingLetters;
+            
+            // Count upcoming court dates (next 7 days)
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            const upcoming = clients.filter(c => {
+                if (!c.nextCourt) return false;
+                const courtDate = new Date(c.nextCourt);
+                return courtDate <= nextWeek && courtDate >= new Date();
+            }).length;
+            document.getElementById('upcomingCourt').textContent = upcoming;
+            
+            // Court breakdown
+            const courtBreakdown = {};
+            clients.forEach(c => {
+                courtBreakdown[c.court] = (courtBreakdown[c.court] || 0) + 1;
+            });
+            
+            const courtDiv = document.getElementById('courtBreakdown');
+            courtDiv.innerHTML = Object.entries(courtBreakdown)
+                .sort((a, b) => b[1] - a[1])
+                .map(([court, count]) => `
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                        <span>${court}</span>
+                        <strong>${count}</strong>
+                    </div>
+                `).join('') || '<p style="color: #6b7280;">No data available</p>';
+            
+            // Letter status chart
+            const statusDiv = document.getElementById('letterStatusChart');
+            const cclSent = clients.filter(c => c.ccl).length;
+            const mentionSent = clients.filter(c => c.mention).length;
+            const finalSent = clients.filter(c => c.final).length;
+            
+            statusDiv.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 2em; font-weight: bold; color: #3b82f6;">${cclSent}</div>
+                        <div>CCL Sent</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 2em; font-weight: bold; color: #16a34a;">${mentionSent}</div>
+                        <div>Mention Letters</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 2em; font-weight: bold; color: #dc2626;">${finalSent}</div>
+                        <div>Final Letters</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add client modal functions
+        function openModal() {
+            document.getElementById('addClientModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('addClientModal').style.display = 'none';
+            document.getElementById('addClientForm').reset();
+        }
+        
+        function addClient(event) {
+            event.preventDefault();
+            
+            const newClient = {
+                id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
+                name: document.getElementById('newClientName').value,
+                address: document.getElementById('newClientAddress').value,
+                matterNumber: document.getElementById('newMatterNumber').value,
+                court: document.getElementById('newCourt').value,
+                matterType: document.getElementById('newMatterType').value,
+                charges: document.getElementById('newCharges').value,
+                legalAid: document.getElementById('newLegalAid').value === 'Yes',
+                nextCourt: document.getElementById('newNextCourt').value,
+                status: 'Active',
+                ccl: false,
+                mention: false,
+                final: false,
+                letterHistory: []
+            };
+            
+            clients.push(newClient);
+            saveData();
+            updateUI();
+            closeModal();
+            
+            alert('Client added successfully!');
+        }
+        
+        // Utility functions
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            return date.toLocaleDateString('en-AU', options);
+        }
+        
+        function getTodayDate() {
+            return new Date().toISOString().split('T')[0];
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
             const modal = document.getElementById('addClientModal');
-            if (event.target === modal) closeModal();
-        };
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
     </script>
-    
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f8fafc;
-            color: #1e293b;
-        }
-        
-        .container { max-width: 1400px; margin: 0 auto; }
-        
-        .header {
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        
-        .tabs {
-            display: flex;
-            gap: 4px;
-            margin-bottom: 20px;
-            background: white;
-            border-radius: 8px;
-            padding: 4px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        
-        .tab {
-            padding: 12px 24px;
-            background: transparent;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-            color: #64748b;
-        }
-        
-        .tab.active {
-            background: #3b82f6;
-            color: white;
-            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
-        }
-        
-        .tab:hover:not(.active) {
-            background: #e2e8f0;
-            color: #475569;
-        }
-        
-        .tab-content {
-            display: none;
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        
-        .tab-content.active { display: block; }
-        
-        .master-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        
-        .master-table th {
-            background: #f1f5f9;
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #475569;
-            border-bottom: 2px solid #e2e8f0;
-        }
-        
-        .master-table td {
-            padding: 12px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .master-table tr:hover { background: #f8fafc; }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-        
-        .status-active { background: #dcfce7; color: #166534; }
-        .status-waiting { background: #fef3c7; color: #92400e; }
-        .status-completed { background: #dbeafe; color: #1e40af; }
-        
-        .form-group { margin-bottom: 20px; }
-        
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 8px;
-        }
-        
-        .form-group select,
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.2s;
-        }
-        
-        .form-group select:focus,
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-        
-        .checkbox-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-            margin-top: 12px;
-        }
-        
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            border: 2px solid #e5e7eb;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-        
-        .checkbox-item:hover {
-            border-color: #3b82f6;
-            background: #f8fafc;
-        }
-        
-        .checkbox-item input[type="checkbox"],
-        .checkbox-item input[type="radio"] { width: auto; }
-        
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 14px;
-            margin-right: 10px;
-        }
-        
-        .btn-primary { background: #3b82f6; color: white; }
-        .btn-primary:hover {
-            background: #2563eb;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
-        
-        .btn-secondary { background: #6b7280; color: white; }
-        .btn-secondary:hover { background: #4b5563; }
-        
-        .btn-success { background: #10b981; color: white; }
-        .btn-success:hover { background: #059669; }
-        
-        .output-box {
-            background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
-            font-family: 'Courier New', monospace;
-            white-space: pre-wrap;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .client-info {
-            background: #f0f9ff;
-            border: 2px solid #0284c7;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-        
-        .client-info h3 {
-            margin: 0 0 12px 0;
-            color: #0284c7;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-        }
-        
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        
-        .info-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        .info-value {
-            font-weight: 500;
-            color: #1f2937;
-        }
-        
-        .section {
-            border-top: 2px solid #eee;
-            margin-top: 25px;
-            padding-top: 20px;
-        }
-        
-        .section-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 15px;
-        }
-        
-        .database-status {
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 4px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        .status-connected { background-color: #d4edda; color: #155724; }
-        .status-disconnected { background-color: #f8d7da; color: #721c24; }
-        
-        .letter-history {
-            background: #f9fafb;
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 20px;
-        }
-        
-        .letter-history h4 {
-            margin: 0 0 12px 0;
-            color: #374151;
-        }
-        
-        .letter-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .letter-item:last-child { border-bottom: none; }
-        
-        .add-client-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-            transition: all 0.2s;
-        }
-        
-        .add-client-btn:hover {
-            background: #2563eb;
-            transform: scale(1.1);
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-        }
-        
-        .modal-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        .close {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #6b7280;
-        }
-        
-        .close:hover { color: #374151; }
-        
-        .cdr-checkbox {
-            background: #fef3c7;
-            border: 2px solid #fbbf24;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-        }
-        
-        .cdr-checkbox label {
-            font-weight: 600;
-            color: #92400e;
-        }
-        
-        .charges-section {
-            background: #f9fafb;
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 12px;
-        }
-        
-        .charges-category {
-            margin-bottom: 20px;
-        }
-        
-        .charges-category h4 {
-            color: #374151;
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-        
-        .conditional {
-            display: none;
-            margin-top: 15px;
-            padding: 15px;
-            background-color: #f0f8ff;
-            border-radius: 8px;
-            border: 1px solid #e0e7ff;
-        }
-        
-        .multi-select {
-            min-height: 120px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Legal Letter Generation System</h1>
-            <p>Streamlined client matter management and automated Claude prompt generation</p>
-        </div>
-        
-        <div class="database-status" id="databaseStatus">Database: Not Connected</div>
-        
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('master', event)">Master Client List</button>
-            <button class="tab" onclick="switchTab('generator', event)">Letter Generator</button>
-            <button class="tab" onclick="switchTab('cdr', event)">CDR</button>
-            <button class="tab" onclick="switchTab('analytics', event)">Analytics</button>
-        </div>
-        
-        <!-- Master Client List Tab -->
-        <div id="master" class="tab-content active">
-            <h2>Active Client Matters</h2>
-            <p>Manage your active matters and track letter status</p>
-            
-            <table class="master-table">
-                <thead>
-                    <tr>
-                        <th>Client Name</th>
-                        <th>Matter #</th>
-                        <th>Court</th>
-                        <th>Charges</th>
-                        <th>Status</th>
-                        <th>CCL</th>
-                        <th>Mention</th>
-                        <th>Final</th>
-                        <th>Next Court</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="clientTableBody"></tbody>
-            </table>
-            
-            <div style="margin-top: 20px;">
-                <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" onchange="loadExcelFile()" style="display: none;">
-                <button class="btn btn-primary" onclick="document.getElementById('excelFile').click()">Upload Excel Database</button>
-                <button class="btn btn-secondary" onclick="exportToExcel()">Export to Excel</button>
-            </div>
-        </div>
-        
-        <!-- Letter Generator Tab -->
-        <div id="generator" class="tab-content">
-            <h2>Generate Letter Prompt</h2>
-            
-            <div class="form-group">
-                <label for="clientSelect">Select Client:</label>
-                <select id="clientSelect" onchange="loadClientInfo()">
-                    <option value="">-- Select a Client --</option>
-                </select>
-            </div>
-            
-            <div id="clientInfoSection" style="display: none;">
-                <div class="client-info">
-                    <h3>Client Information</h3>
-                    <div class="info-grid" id="clientInfoGrid"></div>
-                </div>
-                
-                <div class="letter-history">
-                    <h4>Letter History</h4>
-                    <div id="letterHistoryList"></div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="letterType">Letter Type:</label>
-                    <select id="letterType" onchange="updateLetterFields()">
-                        <option value="">-- Select Letter Type --</option>
-                        <option value="CCL">Client Care Letter (CCL)</option>
-                        <option value="Mention">Mention Letter</option>
-                        <option value="Final">Final Letter</option>
-                        <option value="FeeReestimate">Fee Re-estimate Letter</option>
-                    </select>
-                </div>
-                
-                <div id="dynamicFields"></div>
-                
-                <div class="cdr-checkbox" id="cdrForLetterSection" style="display: none;">
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="generateCDRWithLetter" onchange="toggleCDRFields()">
-                        <label for="generateCDRWithLetter">Generate CDR for next appearance?</label>
-                    </div>
-                    
-                    <div id="cdrFieldsInLetter" style="display: none; margin-top: 15px;">
-                        <h4>CDR Details (will auto-populate from letter data)</h4>
-                        <div class="form-group">
-                            <label for="nextCourtDate">Next Court Date:</label>
-                            <input type="date" id="nextCourtDate">
-                        </div>
-                        <div class="form-group">
-                            <label for="letterCDRReason">CDR Reason:</label>
-                            <select id="letterCDRReason">
-                                <option value="">-- Select Reason --</option>
-                                <option value="Mention">Mention</option>
-                                <option value="Mention (Brief Reply)">Mention (Brief Reply)</option>
-                                <option value="Sentence">Sentence</option>
-                                <option value="Hearing">Hearing</option>
-                                <option value="Compliance Mention">Compliance Mention</option>
-                                <option value="Brief Status">Brief Status</option>
-                                <option value="Charge Certification">Charge Certification</option>
-                                <option value="Committal">Committal</option>
-                                <option value="Arraignment">Arraignment</option>
-                                <option value="Return of Subpoena">Return of Subpoena</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Allocate To:</label>
-                            <div class="checkbox-group">
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="letter_allocate_AAG" value="AAG">
-                                    <label for="letter_allocate_AAG">AAG</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="letter_allocate_RHH" value="RHH">
-                                    <label for="letter_allocate_RHH">RHH</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="letter_allocate_SRS" value="SRS">
-                                    <label for="letter_allocate_SRS">SRS</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="letter_allocate_BJB" value="BJB">
-                                    <label for="letter_allocate_BJB">BJB</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="letter_allocate_NKM" value="NKM">
-                                    <label for="letter_allocate_NKM">NKM</label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="letterCDRClientExcused">
-                            <label for="letterCDRClientExcused">Client Excused</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 30px;">
-                    <button class="btn btn-primary" onclick="generatePrompt()">Generate Claude Prompt</button>
-                    <button class="btn btn-success" onclick="copyPrompt()">Copy to Clipboard</button>
-                    <button class="btn btn-secondary" onclick="clearForm()">Clear Form</button>
-                    <button class="btn btn-success" onclick="sendToZapier()">Send to Zapier</button>
-                    <button class="btn btn-primary" onclick="updateExcelRecord()">Update Excel Record</button>
-                </div>
-                
-                <div id="promptOutput" class="output-box" style="display: none;"></div>
-                <div id="zapierStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
-            </div>
-        </div>
-        
-        <!-- CDR Tab -->
-        <div id="cdr" class="tab-content">
-            <h2>Court Diary Request (CDR)</h2>
-            <p>Generate CDR for court appearances</p>
-            
-            <div class="form-group">
-                <label for="cdrClientSelect">Select Client (Optional):</label>
-                <select id="cdrClientSelect" onchange="loadCDRClientInfo()">
-                    <option value="">-- Manual Entry --</option>
-                </select>
-            </div>
-            
-            <div class="section">
-                <div class="section-title">Court Outcome</div>
-                <div class="form-group">
-                    <label for="cdrOutcomeCourt">Court:</label>
-                    <input type="text" id="cdrOutcomeCourt" placeholder="Enter court name">
-                </div>
-                <div class="form-group">
-                    <label for="cdrOutcomeDate">Date:</label>
-                    <input type="date" id="cdrOutcomeDate">
-                </div>
-                <div class="form-group">
-                    <label for="cdrStartTime">Start Time:</label>
-                    <input type="time" id="cdrStartTime" value="09:30">
-                </div>
-                <div class="form-group">
-                    <label for="cdrFinishTime">Finish Time:</label>
-                    <input type="time" id="cdrFinishTime" value="10:00">
-                </div>
-            </div>
-            
-            <div class="section">
-                <div class="section-title">Court Diary Request</div>
-                <div class="form-group">
-                    <label for="cdrCourtDate">Court Date:</label>
-                    <input type="date" id="cdrCourtDate">
-                </div>
-                <div class="form-group">
-                    <label for="cdrSolicitor">Solicitor:</label>
-                    <select id="cdrSolicitor">
-                        <option value="AAG" selected>AAG</option>
-                        <option value="RHH">RHH</option>
-                        <option value="SRS">SRS</option>
-                        <option value="BJB">BJB</option>
-                        <option value="NKM">NKM</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="cdrClientName">Client Name:</label>
-                    <input type="text" id="cdrClientName" placeholder="Enter client name">
-                </div>
-                <div class="form-group">
-                    <label for="cdrFileNumber">File Number:</label>
-                    <input type="text" id="cdrFileNumber" placeholder="Enter file number">
-                </div>
-                <div class="form-group">
-                    <label for="cdrReason">Reason:</label>
-                    <select id="cdrReason">
-                        <option value="">-- Select Reason --</option>
-                        <option value="Mention">Mention</option>
-                        <option value="Mention (Brief Reply)">Mention (Brief Reply)</option>
-                        <option value="Sentence">Sentence</option>
-                        <option value="Hearing">Hearing</option>
-                        <option value="Compliance Mention">Compliance Mention</option>
-                        <option value="Brief Status">Brief Status</option>
-                        <option value="Charge Certification">Charge Certification</option>
-                        <option value="Committal">Committal</option>
-                        <option value="Arraignment">Arraignment</option>
-                        <option value="Return of Subpoena">Return of Subpoena</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="cdrCourt">Court:</label>
-                    <input type="text" id="cdrCourt" placeholder="Enter court name">
-                </div>
-                <div class="form-group">
-                    <label for="cdrCourtTime">Court Time:</label>
-                    <input type="time" id="cdrCourtTime" value="09:30">
-                </div>
-                <div class="form-group">
-                    <label>Allocate To:</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="allocate_AAG" value="AAG">
-                            <label for="allocate_AAG">AAG</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="allocate_RHH" value="RHH">
-                            <label for="allocate_RHH">RHH</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="allocate_SRS" value="SRS">
-                            <label for="allocate_SRS">SRS</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="allocate_BJB" value="BJB">
-                            <label for="allocate_BJB">BJB</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="allocate_NKM" value="NKM">
-                            <label for="allocate_NKM">NKM</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="cdrClientExcused">
-                        <label for="cdrClientExcused">Client Excused</label>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="cdrFeeReminder">Fee Reminder:</label>
-                    <input type="text" id="cdrFeeReminder" placeholder="Enter fee reminder details">
-                </div>
-            </div>
-            
-            <div style="margin-top: 30px;">
-                <button class="btn btn-primary" onclick="generateCDR()">Generate CDR</button>
-                <button class="btn btn-success" onclick="sendCDRToZapier()">Send CDR to Zapier</button>
-                <button class="btn btn-secondary" onclick="clearCDRForm()">Clear Form</button>
-            </div>
-            
-            <div id="cdrOutput" class="output-box" style="display: none;"></div>
-            <div id="cdrZapierStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
-        </div>
-        
-        <!-- Analytics Tab -->
-        <div id="analytics" class="tab-content">
-            <h2>Matter Analytics</h2>
-            <p>Overview of your client matters and letter status</p>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
-                <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; text-align: center;">
-                    <h3 style="margin: 0; color: #0284c7;">Total Matters</h3>
-                    <p style="font-size: 2em; font-weight: bold; margin: 10px 0; color: #0284c7;" id="totalMatters">0</p>
-                </div>
-                <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; text-align: center;">
-                    <h3 style="margin: 0; color: #16a34a;">Active Cases</h3>
-                    <p style="font-size: 2em; font-weight: bold; margin: 10px 0; color: #16a34a;" id="activeMatters">0</p>
-                </div>
-                <div style="background: #fefce8; padding: 20px; border-radius: 8px; text-align: center;">
-                    <h3 style="margin: 0; color: #ca8a04;">Pending Letters</h3>
-                    <p style="font-size: 2em; font-weight: bold; margin: 10px 0; color: #ca8a04;" id="pendingLetters">0</p>
-                </div>
-                <div style="background: #fdf2f8; padding: 20px; border-radius: 8px; text-align: center;">
-                    <h3 style="margin: 0; color: #be185d;">Next Week</h3>
-                    <p style="font-size: 2em; font-weight: bold; margin: 10px 0; color: #be185d;" id="upcomingCourt">0</p>
-                </div>
-            </div>
-            
-            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3>Matters by Court</h3>
-                <div id="courtBreakdown"></div>
-            </div>
-            
-            <div style="background: white; padding: 20px; border-radius: 8px;">
-                <h3>Letter Status Overview</h3>
-                <div id="letterStatusChart"></div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Add Client Modal -->
-    <div id="addClientModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h2>Add New Client</h2>
-            
-            <form id="addClientForm" onsubmit="addClient(event)">
-                <div class="form-group">
-                    <label for="newClientName">Client Name:</label>
-                    <input type="text" id="newClientName" required>
-                </div>
-                <div class="form-group">
-                    <label for="newClientAddress">Address:</label>
-                    <textarea id="newClientAddress" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="newMatterNumber">Matter Reference:</label>
-                    <input type="text" id="newMatterNumber" required>
-                </div>
-                <div class="form-group">
-                    <label for="newCourt">Court:</label>
-                    <select id="newCourt" required>
-                        <option value="">-- Select Court --</option>
-                        <option value="Balmain Local Court">Balmain Local Court</option>
-                        <option value="Bankstown Local Court">Bankstown Local Court</option>
-                        <option value="Blacktown Local Court">Blacktown Local Court</option>
-                        <option value="Burwood Local Court">Burwood Local Court</option>
-                        <option value="Campbelltown District Court">Campbelltown District Court</option>
-                        <option value="Campbelltown Local Court">Campbelltown Local Court</option>
-                        <option value="Downing Centre District Court">Downing Centre District Court</option>
-                        <option value="Downing Centre Local Court">Downing Centre Local Court</option>
-                        <option value="Fairfield Local Court">Fairfield Local Court</option>
-                        <option value="Hornsby Local Court">Hornsby Local Court</option>
-                        <option value="Liverpool Local Court">Liverpool Local Court</option>
-                        <option value="Manly Local Court">Manly Local Court</option>
-                        <option value="Newtown Local Court">Newtown Local Court</option>
-                        <option value="Parramatta District Court">Parramatta District Court</option>
-                        <option value="Parramatta Local Court">Parramatta Local Court</option>
-                        <option value="Penrith District Court">Penrith District Court</option>
-                        <option value="Penrith Local Court">Penrith Local Court</option>
-                        <option value="Sutherland Local Court">Sutherland Local Court</option>
-                        <option value="Sydney District Court">Sydney District Court</option>
-                        <option value="Waverley Local Court">Waverley Local Court</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="newMatterType">Matter Type:</label>
-                    <select id="newMatterType" required>
-                        <option value="">-- Select Matter Type --</option>
-                        <option value="Criminal - Summary">Criminal - Summary</option>
-                        <option value="Criminal - Indictable">Criminal - Indictable</option>
-                        <option value="ADVO">ADVO</option>
-                        <option value="Bail Application">Bail Application</option>
-                        <option value="Appeal">Appeal</option>
-                        <option value="Section 14 Application">Section 14 Application</option>
-                        <option value="Trial">Trial</option>
-                        <option value="Sentence">Sentence</option>
-                        <option value="Committal">Committal</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="newCharges">Charges:</label>
-                    <input type="text" id="newCharges" placeholder="e.g., Common Assault - s61 Crimes Act" required>
-                </div>
-                <div class="form-group">
-                    <label for="newLegalAid">Legal Aid?</label>
-                    <select id="newLegalAid">
-                        <option value="No">No</option>
-                        <option value="Yes">Yes</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="newNextCourt">Next Court Date:</label>
-                    <input type="date" id="newNextCourt">
-                </div>
-                
-                <button type="submit" class="btn btn-primary">Add Client</button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-            </form>
-        </div>
-    </div>
-    
-    <button class="add-client-btn" onclick="openModal()" title="Add New Client">+</button>
 </body>
 </html>
