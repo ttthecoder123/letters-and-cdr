@@ -281,7 +281,7 @@ COURT: ${data.court}
 COURT TIME: ${data.courtTime}
 ALLOCATE TO: ${data.allocateTo}
 CLIENT EXCUSED: ${data.clientExcused ? 'Yes' : 'No'}
-FEE REMINDER: ${data.feeReminder || 'N/A'}`;
+FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITIONAL DATES:\n' + data.additionalDates : ''}`;
         };
         
         const formatCDRHTML = (data) => {
@@ -315,6 +315,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                     ${row('ALLOCATE TO', data.allocateTo)}
                     ${row('CLIENT EXCUSED', data.clientExcused ? 'Yes' : 'No')}
                     ${row('FEE REMINDER', data.feeReminder)}
+                    ${data.additionalDates ? row('ADDITIONAL DATES', data.additionalDates) : ''}
                 </table>
             </div>`;
         };
@@ -334,7 +335,8 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                 courtTime: document.getElementById('cdrCourtTime').value,
                 allocateTo: getAllocatedTo(),
                 clientExcused: document.getElementById('cdrClientExcused').checked,
-                feeReminder: document.getElementById('cdrFeeReminder').value
+                feeReminder: document.getElementById('cdrFeeReminder').value,
+                additionalDates: document.getElementById('cdrAdditionalDates')?.value || ''
             };
             
             currentCDRData = cdrData;
@@ -756,6 +758,17 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                 <div class="section">
                     <div class="section-title">Charges</div>
                     
+                    <div class="form-group" style="background: #f0f9ff; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                        <label style="font-weight: 600; color: #0284c7;">Charges from Database:</label>
+                        <div style="padding: 8px; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+                            ${currentClient && currentClient.charges ? currentClient.charges : 'No charges loaded from database'}
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 14px; color: #64748b; margin-bottom: 15px;">
+                        Select additional charges or modify the existing charges below:
+                    </p>
+                    
                     <div class="charges-section">
                         <div class="charges-category">
                             <h4>Violence Offences</h4>
@@ -1158,6 +1171,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                             <option value="Hearing">Hearing</option>
                             <option value="Sentence">Sentence</option>
                             <option value="Trial">Trial</option>
+                            <option value="Section 14 Application">Section 14 Application</option>
                         </select>
                     </div>
                     
@@ -1848,21 +1862,31 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
         // Helper functions for collecting form data
         const getSelectedCharges = () => {
             const charges = [];
+            
+            // Start with charges from Excel/database if they exist
+            if (currentClient && currentClient.charges) {
+                charges.push(currentClient.charges);
+            }
+            
+            // Add any selected checkbox charges
             document.querySelectorAll('input[type="checkbox"][id^="charge_"]:checked').forEach(cb => {
                 charges.push(cb.value);
             });
             
+            // Add any additional charges typed in
             const additional = document.getElementById('additionalCharges')?.value;
             if (additional) charges.push(additional);
             
-            const counts = document.getElementById('counts')?.value;
-            let chargeString = charges.length > 0 ? charges.join(', ') : currentClient.charges;
+            // Join all charges and remove duplicates
+            let allCharges = charges.join(', ');
             
+            // Add count information if provided
+            const counts = document.getElementById('counts')?.value;
             if (counts && counts > 1) {
-                chargeString += ` (${counts} counts)`;
+                allCharges += ` (${counts} counts)`;
             }
             
-            return chargeString;
+            return allCharges || 'No charges specified';
         };
         
         const getSelectedMaterials = () => {
@@ -2526,7 +2550,12 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}`;
                         <option value="Committal">Committal</option>
                         <option value="Arraignment">Arraignment</option>
                         <option value="Return of Subpoena">Return of Subpoena</option>
+                        <option value="Section 14 Application">Section 14 Application</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label for="cdrAdditionalDates">Additional Dates to Note:</label>
+                    <textarea id="cdrAdditionalDates" placeholder="Enter any additional dates that should be noted (e.g., conference dates, filing deadlines)"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="cdrCourt">Court:</label>
