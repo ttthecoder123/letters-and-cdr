@@ -11,6 +11,8 @@
         let clients = [];
         let currentClient = null;
         let currentCDRData = null;
+        let courtCalendarData = [];
+        let currentWeekNumber = null;
         
         // ===== UTILITIES =====
         const formatDate = (dateString) => {
@@ -74,27 +76,78 @@
         
         const loadClientTable = () => {
             const tbody = document.getElementById('clientTableBody');
-            if (!tbody) return;
+            const cardsContainer = document.getElementById('clientCardsContainer');
             
-            tbody.innerHTML = clients.length === 0 ? 
-                `<tr><td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
-                    No clients loaded. Please upload an Excel database or add clients manually.
-                </td></tr>` :
-                clients.map(client => `
-                    <tr>
-                        <td><strong>${client.name}</strong></td>
-                        <td>${client.matterNumber}</td>
-                        <td>${client.court}</td>
-                        <td>${client.charges}</td>
-                        <td><span class="status-badge status-${client.status.toLowerCase()}">${client.status}</span></td>
-                        <td>${client.ccl ? '✅' : '❌'}</td>
-                        <td>${client.mention ? '✅' : '❌'}</td>
-                        <td>${client.final ? '✅' : '❌'}</td>
-                        <td>${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</td>
-                        <td><button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" 
-                            onclick="selectClientForLetter(${client.id})">Generate Letter</button></td>
-                    </tr>
-                `).join('');
+            if (!tbody && !cardsContainer) return;
+            
+            // Desktop table view
+            if (tbody) {
+                tbody.innerHTML = clients.length === 0 ? 
+                    `<tr><td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
+                        No clients loaded. Please upload an Excel database or add clients manually.
+                    </td></tr>` :
+                    clients.map(client => `
+                        <tr>
+                            <td><strong>${client.name}</strong></td>
+                            <td>${client.matterNumber}</td>
+                            <td>${client.court}</td>
+                            <td>${client.charges}</td>
+                            <td><span class="status-badge status-${client.status.toLowerCase()}">${client.status}</span></td>
+                            <td>${client.ccl ? '✅' : '❌'}</td>
+                            <td>${client.mention ? '✅' : '❌'}</td>
+                            <td>${client.final ? '✅' : '❌'}</td>
+                            <td>${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</td>
+                            <td><button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" 
+                                onclick="selectClientForLetter(${client.id})">Generate Letter</button></td>
+                        </tr>
+                    `).join('');
+            }
+            
+            // Mobile cards view
+            if (cardsContainer) {
+                cardsContainer.innerHTML = clients.length === 0 ?
+                    `<div style="text-align: center; padding: 40px; color: #6b7280;">
+                        No clients loaded. Please upload an Excel database or add clients manually.
+                    </div>` :
+                    clients.map(client => `
+                        <div class="client-card">
+                            <div class="client-card-header">
+                                <div class="client-card-name">${client.name}</div>
+                                <span class="status-badge client-card-status status-${client.status.toLowerCase()}">${client.status}</span>
+                            </div>
+                            <div class="client-card-details">
+                                <div class="client-card-row">
+                                    <span class="client-card-label">Matter #</span>
+                                    <span class="client-card-value">${client.matterNumber}</span>
+                                </div>
+                                <div class="client-card-row">
+                                    <span class="client-card-label">Court</span>
+                                    <span class="client-card-value">${client.court}</span>
+                                </div>
+                                <div class="client-card-row">
+                                    <span class="client-card-label">Next Court</span>
+                                    <span class="client-card-value">${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</span>
+                                </div>
+                                <div class="client-card-row">
+                                    <span class="client-card-label">Letters Sent</span>
+                                    <span class="client-card-value">
+                                        CCL ${client.ccl ? '✅' : '❌'} | 
+                                        Mention ${client.mention ? '✅' : '❌'} | 
+                                        Final ${client.final ? '✅' : '❌'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="client-card-charges">
+                                <strong>Charges:</strong> ${client.charges || 'No charges listed'}
+                            </div>
+                            <div class="client-card-actions">
+                                <button class="btn btn-primary" onclick="selectClientForLetter(${client.id})">
+                                    Generate Letter
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+            }
         };
         
         const loadClientSelect = () => {
@@ -184,6 +237,7 @@
             if (event?.target) event.target.classList.add('active');
             
             if (tabName === 'analytics') updateAnalytics();
+            if (tabName === 'calendar') updateCourtCalendar();
         };
         
         // ===== MODAL MANAGEMENT =====
@@ -691,10 +745,36 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         letterHistory: []
                     }));
                     
+                    // Try to load CourtCalendar sheet if it exists
+                    if (workbook.SheetNames.includes('CourtCalendar')) {
+                        const calendarSheet = workbook.Sheets['CourtCalendar'];
+                        const calendarData = XLSX.utils.sheet_to_json(calendarSheet);
+                        courtCalendarData = calendarData.map(row => ({
+                            date: row['Date'],
+                            endTime: row['End_Time'],
+                            clientName: row['Client_Name'] || '',
+                            matterType: row['Matter_Type'] || '',
+                            matterNumber: row['Matter_Number'] || '',
+                            court: row['Court'] || '',
+                            durationHours: parseFloat(row['Duration_Hours']) || 0,
+                            weekNumber: parseInt(row['Week_Number']) || 0,
+                            dayName: row['Day_Name'] || ''
+                        }));
+                        
+                        // Set current week to the week of today
+                        const today = new Date();
+                        const startOfYear = new Date(today.getFullYear(), 0, 1);
+                        const days = Math.floor((today - startOfYear) / (24 * 60 * 60 * 1000));
+                        currentWeekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+                    }
+                    
                     saveData();
                     updateUI();
                     updateDatabaseStatus(true);
-                    alert(`Successfully loaded ${clients.length} clients from Excel`);
+                    if (courtCalendarData.length > 0) {
+                        updateCourtCalendar();
+                    }
+                    alert(`Successfully loaded ${clients.length} clients${courtCalendarData.length > 0 ? ` and ${courtCalendarData.length} calendar entries` : ''} from Excel`);
                 } catch (error) {
                     alert('Error loading Excel file: ' + error.message);
                     console.error('Excel loading error:', error);
@@ -1924,6 +2004,159 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             return selected.join(', ');
         };
         
+        // ===== COURT CALENDAR FUNCTIONS =====
+        const updateCourtCalendar = () => {
+            if (!courtCalendarData || courtCalendarData.length === 0) {
+                document.getElementById('weekHeader').innerHTML = '<p style="text-align: center; color: #6b7280;">No calendar data loaded. Please upload an Excel file with a CourtCalendar sheet.</p>';
+                return;
+            }
+            
+            // Filter data for current week
+            const weekData = courtCalendarData.filter(item => item.weekNumber === currentWeekNumber);
+            
+            if (weekData.length === 0) {
+                document.getElementById('weekHeader').innerHTML = `<h3>Week ${currentWeekNumber}: No court appearances scheduled</h3>`;
+                document.getElementById('weekGrid').innerHTML = '';
+                document.getElementById('dailyDetails').innerHTML = '';
+                document.getElementById('weekTotals').innerHTML = '';
+                return;
+            }
+            
+            // Get week date range
+            const weekDates = weekData.map(item => new Date(item.date));
+            const minDate = new Date(Math.min(...weekDates));
+            const maxDate = new Date(Math.max(...weekDates));
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            
+            document.getElementById('weekHeader').innerHTML = `
+                <h3>Week ${currentWeekNumber}: ${monthNames[minDate.getMonth()]} ${minDate.getDate()}-${maxDate.getDate()}, ${minDate.getFullYear()}</h3>
+            `;
+            
+            // Create daily summaries
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+            const dailySummaries = {};
+            
+            days.forEach(day => {
+                const dayData = weekData.filter(item => item.dayName === day);
+                dailySummaries[day] = {
+                    matters: dayData,
+                    count: dayData.length,
+                    totalHours: dayData.reduce((sum, item) => sum + item.durationHours, 0)
+                };
+            });
+            
+            // Create week grid
+            let gridHTML = '<div class="week-grid-container">';
+            days.forEach(day => {
+                const summary = dailySummaries[day];
+                const colorClass = summary.count === 0 ? 'day-empty' : 
+                                  summary.count <= 2 ? 'day-light' : 
+                                  summary.count <= 4 ? 'day-medium' : 'day-heavy';
+                
+                gridHTML += `
+                    <div class="day-card ${colorClass}" onclick="toggleDayDetails('${day}')">
+                        <div class="day-header">${day}</div>
+                        <div class="day-stats">
+                            <div class="matter-count">${summary.count} ${summary.count === 1 ? 'matter' : 'matters'}</div>
+                            <div class="hour-count">${summary.totalHours.toFixed(1)} hours</div>
+                        </div>
+                    </div>
+                `;
+            });
+            gridHTML += '</div>';
+            document.getElementById('weekGrid').innerHTML = gridHTML;
+            
+            // Create daily details
+            let detailsHTML = '<div class="daily-details-container">';
+            days.forEach(day => {
+                const summary = dailySummaries[day];
+                if (summary.count > 0) {
+                    // Sort matters by time
+                    const sortedMatters = summary.matters.sort((a, b) => {
+                        const timeA = new Date(a.date);
+                        const timeB = new Date(b.date);
+                        return timeA - timeB;
+                    });
+                    
+                    detailsHTML += `
+                        <div class="day-details" id="details-${day}">
+                            <h4>${day}</h4>
+                            <div class="matters-list">
+                    `;
+                    
+                    sortedMatters.forEach(matter => {
+                        const matterDate = new Date(matter.date);
+                        const timeStr = matterDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                        detailsHTML += `
+                            <div class="matter-item">
+                                <div class="matter-time">${timeStr}</div>
+                                <div class="matter-info">
+                                    <div class="matter-client">${matter.clientName}</div>
+                                    <div class="matter-details">${matter.matterType} - ${matter.court}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    detailsHTML += `
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            detailsHTML += '</div>';
+            document.getElementById('dailyDetails').innerHTML = detailsHTML;
+            
+            // Calculate week totals
+            const weekTotalMatters = weekData.length;
+            const weekTotalHours = weekData.reduce((sum, item) => sum + item.durationHours, 0);
+            
+            document.getElementById('weekTotals').innerHTML = `
+                <div class="week-summary">
+                    <h4>Week Totals</h4>
+                    <div class="summary-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Matters:</span>
+                            <span class="stat-value">${weekTotalMatters}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Hours:</span>
+                            <span class="stat-value">${weekTotalHours.toFixed(1)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+        
+        const navigateWeek = (direction) => {
+            if (!courtCalendarData || courtCalendarData.length === 0) return;
+            
+            if (direction === 'current') {
+                // Set to current week
+                const today = new Date();
+                const startOfYear = new Date(today.getFullYear(), 0, 1);
+                const days = Math.floor((today - startOfYear) / (24 * 60 * 60 * 1000));
+                currentWeekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+            } else if (direction === 'prev') {
+                currentWeekNumber = Math.max(1, currentWeekNumber - 1);
+            } else if (direction === 'next') {
+                currentWeekNumber = Math.min(52, currentWeekNumber + 1);
+            }
+            
+            updateCourtCalendar();
+        };
+        
+        const toggleDayDetails = (day) => {
+            const details = document.getElementById(`details-${day}`);
+            if (details) {
+                details.classList.toggle('expanded');
+                // On mobile, scroll to the details
+                if (window.innerWidth <= 430) {
+                    details.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+        };
+        
         // ===== INITIALIZATION =====
         document.addEventListener('DOMContentLoaded', () => {
             loadSavedData();
@@ -2310,6 +2543,538 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         .multi-select {
             min-height: 120px;
         }
+        /* Court Calendar Styles */
+        .calendar-navigation {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .week-header {
+            text-align: center;
+            margin: 20px 0;
+            color: #1e293b;
+        }
+        
+        .week-header h3 {
+            font-size: 24px;
+            margin: 0;
+        }
+        
+        .week-grid-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .day-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            position: relative;
+        }
+        
+        .day-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .day-empty {
+            background: #f9fafb;
+            border-color: #e5e7eb;
+        }
+        
+        .day-light {
+            background: #dcfce7;
+            border-color: #86efac;
+        }
+        
+        .day-medium {
+            background: #fef3c7;
+            border-color: #fcd34d;
+        }
+        
+        .day-heavy {
+            background: #fee2e2;
+            border-color: #fca5a5;
+        }
+        
+        .day-header {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #1e293b;
+        }
+        
+        .day-stats {
+            font-size: 14px;
+        }
+        
+        .matter-count {
+            color: #475569;
+            margin-bottom: 5px;
+        }
+        
+        .hour-count {
+            color: #64748b;
+            font-size: 13px;
+        }
+        
+        .daily-details-container {
+            margin: 30px 0;
+        }
+        
+        .day-details {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .day-details h4 {
+            margin: 0 0 15px 0;
+            color: #1e293b;
+            font-size: 18px;
+        }
+        
+        .matters-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .matter-item {
+            display: flex;
+            gap: 15px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 6px;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .matter-time {
+            font-weight: 600;
+            color: #1e293b;
+            min-width: 80px;
+        }
+        
+        .matter-info {
+            flex: 1;
+        }
+        
+        .matter-client {
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+        
+        .matter-details {
+            font-size: 14px;
+            color: #64748b;
+        }
+        
+        .week-summary {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        
+        .week-summary h4 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+        }
+        
+        .summary-stats {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+        }
+        
+        .stat-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .stat-label {
+            opacity: 0.9;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        /* Mobile Card View for Client Table */
+        .client-card {
+            display: none;
+        }
+        
+        /* Responsive Design - iPhone 16 Pro Max (430px) */
+        @media (max-width: 430px) {
+            body {
+                padding: 10px;
+                font-size: 16px;
+                -webkit-text-size-adjust: 100%;
+            }
+            
+            .container {
+                padding: 0;
+            }
+            
+            .header {
+                padding: 20px 15px;
+                margin-bottom: 15px;
+                border-radius: 8px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+                margin-bottom: 5px;
+            }
+            
+            .header p {
+                font-size: 14px;
+            }
+            
+            /* Tabs - Stack vertically on mobile */
+            .tabs {
+                flex-direction: column;
+                padding: 8px;
+            }
+            
+            .tab {
+                width: 100%;
+                padding: 15px;
+                font-size: 16px;
+                text-align: left;
+                min-height: 44px;
+            }
+            
+            /* Hide table on mobile, show cards */
+            .master-table {
+                display: none;
+            }
+            
+            .client-card {
+                display: block;
+                background: white;
+                border-radius: 8px;
+                padding: 15px;
+                margin-bottom: 15px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                border-left: 4px solid #3b82f6;
+            }
+            
+            .client-card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: start;
+                margin-bottom: 10px;
+            }
+            
+            .client-card-name {
+                font-weight: 600;
+                font-size: 18px;
+                color: #1e293b;
+                flex: 1;
+            }
+            
+            .client-card-status {
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 500;
+            }
+            
+            .client-card-details {
+                margin-bottom: 10px;
+            }
+            
+            .client-card-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 5px 0;
+                font-size: 14px;
+            }
+            
+            .client-card-label {
+                color: #64748b;
+                font-weight: 500;
+            }
+            
+            .client-card-value {
+                color: #1e293b;
+                text-align: right;
+            }
+            
+            .client-card-charges {
+                padding: 8px;
+                background: #f8fafc;
+                border-radius: 4px;
+                margin: 10px 0;
+                font-size: 14px;
+                color: #475569;
+                max-height: 60px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            
+            .client-card-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 15px;
+            }
+            
+            .client-card-actions .btn {
+                flex: 1;
+                padding: 12px;
+                font-size: 16px;
+                min-height: 44px;
+            }
+            
+            /* Form elements - full width on mobile */
+            .form-group input,
+            .form-group select,
+            .form-group textarea {
+                width: 100%;
+                font-size: 16px;
+                padding: 15px;
+                min-height: 44px;
+            }
+            
+            .form-group label {
+                font-size: 16px;
+                margin-bottom: 8px;
+            }
+            
+            /* Checkboxes - larger touch targets */
+            .checkbox-item {
+                padding: 15px;
+                margin-bottom: 8px;
+            }
+            
+            .checkbox-item input[type="checkbox"],
+            .checkbox-item input[type="radio"] {
+                width: 20px;
+                height: 20px;
+                margin-right: 12px;
+            }
+            
+            /* Buttons - full width and larger */
+            .btn {
+                width: 100%;
+                padding: 15px;
+                font-size: 16px;
+                margin-bottom: 10px;
+                margin-right: 0;
+                min-height: 44px;
+            }
+            
+            /* Court Calendar Mobile */
+            .calendar-navigation {
+                flex-direction: column;
+            }
+            
+            .calendar-navigation .btn {
+                width: 100%;
+                margin: 5px 0;
+            }
+            
+            .week-grid-container {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .day-card {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 15px;
+            }
+            
+            .day-header {
+                font-size: 16px;
+            }
+            
+            .day-stats {
+                text-align: right;
+            }
+            
+            .day-details {
+                display: none;
+                margin-top: 10px;
+                padding: 15px;
+            }
+            
+            .day-details.expanded {
+                display: block;
+            }
+            
+            .matter-item {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .matter-time {
+                font-size: 14px;
+                min-width: auto;
+            }
+            
+            .summary-stats {
+                flex-direction: column;
+                gap: 15px;
+                align-items: center;
+            }
+            
+            .stat-item {
+                justify-content: space-between;
+                width: 100%;
+            }
+            
+            /* Modal - full screen on mobile */
+            .modal-content {
+                width: 100%;
+                height: 100%;
+                max-height: 100vh;
+                border-radius: 0;
+                padding: 20px;
+                margin: 0;
+                position: fixed;
+                top: 0;
+                left: 0;
+                transform: none;
+            }
+            
+            .close {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                font-size: 32px;
+                z-index: 1001;
+                background: white;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+            
+            /* Tab content padding */
+            .tab-content {
+                padding: 15px;
+            }
+            
+            /* Analytics charts - stack vertically */
+            #analytics .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Output boxes */
+            .output-box {
+                font-size: 14px;
+                padding: 15px;
+            }
+            
+            /* Info grid */
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Prevent horizontal scroll */
+            html, body {
+                overflow-x: hidden;
+                max-width: 100%;
+            }
+            
+            /* iOS specific */
+            input, select, textarea {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+            }
+            
+            /* Safe area for iPhone notch */
+            .header {
+                padding-top: calc(20px + env(safe-area-inset-top));
+            }
+            
+            .container {
+                padding-left: env(safe-area-inset-left);
+                padding-right: env(safe-area-inset-right);
+            }
+            
+            /* Touch-friendly scrolling */
+            .tab-content, .modal-content {
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Larger touch targets for links */
+            a {
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            /* Section spacing */
+            .section {
+                margin-bottom: 20px;
+                padding: 15px;
+            }
+            
+            .section-title {
+                font-size: 16px;
+                margin-bottom: 10px;
+            }
+            
+            /* CDR checkbox */
+            .cdr-checkbox {
+                margin: 15px 0;
+            }
+            
+            /* Database status */
+            .database-status {
+                font-size: 14px;
+                padding: 10px;
+                margin-bottom: 15px;
+            }
+            
+            /* Add client button - fixed position */
+            .add-client-btn {
+                bottom: 20px;
+                right: 20px;
+                width: 56px;
+                height: 56px;
+                font-size: 24px;
+            }
+        }
+        
+        /* Additional breakpoint for tablets */
+        @media (min-width: 431px) and (max-width: 768px) {
+            .week-grid-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+            
+            .tab {
+                flex: 1 1 calc(50% - 4px);
+                min-width: 150px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -2325,6 +3090,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             <button class="tab active" onclick="switchTab('master', event)">Master Client List</button>
             <button class="tab" onclick="switchTab('generator', event)">Letter Generator</button>
             <button class="tab" onclick="switchTab('cdr', event)">CDR</button>
+            <button class="tab" onclick="switchTab('calendar', event)">Court Calendar</button>
             <button class="tab" onclick="switchTab('analytics', event)">Analytics</button>
         </div>
         
@@ -2333,6 +3099,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             <h2>Active Client Matters</h2>
             <p>Manage your active matters and track letter status</p>
             
+            <!-- Desktop Table View -->
             <table class="master-table">
                 <thead>
                     <tr>
@@ -2350,6 +3117,11 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 </thead>
                 <tbody id="clientTableBody"></tbody>
             </table>
+            
+            <!-- Mobile Cards View -->
+            <div id="clientCardsContainer" class="client-cards-container">
+                <!-- Client cards will be inserted here for mobile view -->
+            </div>
             
             <div style="margin-top: 20px;">
                 <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" onchange="loadExcelFile()" style="display: none;">
@@ -2645,6 +3417,34 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 <h3>Letter Status Overview</h3>
                 <div id="letterStatusChart"></div>
             </div>
+        </div>
+    </div>
+    
+    <!-- Court Calendar Tab -->
+    <div id="calendar" class="tab-content">
+        <h2>Court Calendar</h2>
+        <p>Your weekly court schedule at a glance</p>
+        
+        <div class="calendar-navigation">
+            <button class="btn btn-secondary" onclick="navigateWeek('prev')">← Previous Week</button>
+            <button class="btn btn-primary" onclick="navigateWeek('current')">Current Week</button>
+            <button class="btn btn-secondary" onclick="navigateWeek('next')">Next Week →</button>
+        </div>
+        
+        <div id="weekHeader" class="week-header">
+            <!-- Week header will be inserted here -->
+        </div>
+        
+        <div id="weekGrid" class="week-grid">
+            <!-- Weekly grid will be inserted here -->
+        </div>
+        
+        <div id="dailyDetails" class="daily-details">
+            <!-- Daily matter details will be inserted here -->
+        </div>
+        
+        <div id="weekTotals" class="week-totals">
+            <!-- Week totals will be inserted here -->
         </div>
     </div>
     
