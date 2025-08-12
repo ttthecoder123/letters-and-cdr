@@ -2157,6 +2157,106 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             }
         };
         
+        // ===== SUPABASE UPLOAD FUNCTION =====
+        async function uploadToSupabase() {
+            const SUPABASE_URL = 'https://mtqigmqynrpsoaiplsho.supabase.co';
+            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10cWlnbXF5bnJwc29haXBsc2hvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5NzU0NTMsImV4cCI6MjA3MDU1MTQ1M30.f71vQrugWqL2xaQEyX0uAaBhxEKdRa66s_u4zZiKaMk';
+            const FIRM_ID = '1938adc8-04ff-43a6-9404-5e7a80ce3e44'; // Alexander Georgieff's firm ID
+            const USER_ID = 'ce79738f-a7a9-4b99-9f41-3e539f2583ea'; // Alexander Georgieff's user ID
+            
+            if (!clients || clients.length === 0) {
+                alert('No clients loaded. Please upload an Excel file first.');
+                return;
+            }
+            
+            // Validation: Credentials are now properly configured
+            
+            let successCount = 0;
+            let errorCount = 0;
+            const errors = [];
+            
+            console.log(`Starting upload of ${clients.length} clients to Supabase...`);
+            
+            for (const client of clients) {
+                try {
+                    // Create client record
+                    const clientResponse = await fetch(`${SUPABASE_URL}/rest/v1/clients`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=representation'
+                        },
+                        body: JSON.stringify({
+                            name: client.name,
+                            address: client.address || null,
+                            firm_id: FIRM_ID,
+                            created_by: USER_ID
+                        })
+                    });
+                    
+                    if (!clientResponse.ok) {
+                        throw new Error(`Failed to create client ${client.name}: ${clientResponse.statusText}`);
+                    }
+                    
+                    const clientData = await clientResponse.json();
+                    const clientId = Array.isArray(clientData) ? clientData[0].id : clientData.id;
+                    
+                    // Create matter for this client
+                    const matterResponse = await fetch(`${SUPABASE_URL}/rest/v1/matters`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            client_id: clientId,
+                            matter_number: client.matterNumber,
+                            court: client.court,
+                            matter_type: client.matterType || null,
+                            charges: client.charges,
+                            legal_aid: client.legalAid || false,
+                            contribution: client.contribution || null,
+                            status: client.status || 'Active',
+                            next_court_date: client.nextCourt || null,
+                            ccl_sent: client.ccl || false,
+                            mention_sent: client.mention || false,
+                            final_sent: client.final || false,
+                            created_by: USER_ID
+                        })
+                    });
+                    
+                    if (!matterResponse.ok) {
+                        throw new Error(`Failed to create matter for ${client.name}: ${matterResponse.statusText}`);
+                    }
+                    
+                    successCount++;
+                    console.log(`✓ Uploaded client ${successCount}/${clients.length}: ${client.name}`);
+                    
+                } catch (error) {
+                    errorCount++;
+                    errors.push(`${client.name}: ${error.message}`);
+                    console.error(`✗ Error uploading ${client.name}:`, error);
+                }
+            }
+            
+            // Display results
+            let message = `Upload complete!\n\nSuccessfully uploaded: ${successCount} clients\n`;
+            if (errorCount > 0) {
+                message += `Failed: ${errorCount} clients\n\n`;
+                if (errors.length <= 5) {
+                    message += 'Errors:\n' + errors.join('\n');
+                } else {
+                    message += `First 5 errors:\n${errors.slice(0, 5).join('\n')}\n(Check console for all errors)`;
+                }
+            }
+            
+            alert(message);
+            console.log('Upload summary:', { successCount, errorCount, errors });
+        }
+        
         // ===== INITIALIZATION =====
         document.addEventListener('DOMContentLoaded', () => {
             loadSavedData();
@@ -3127,6 +3227,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" onchange="loadExcelFile()" style="display: none;">
                 <button class="btn btn-primary" onclick="document.getElementById('excelFile').click()">Upload Excel Database</button>
                 <button class="btn btn-secondary" onclick="exportToExcel()">Export to Excel</button>
+                <button class="btn btn-success" onclick="uploadToSupabase()" style="background: #10b981;">Upload to Supabase</button>
             </div>
         </div>
         
