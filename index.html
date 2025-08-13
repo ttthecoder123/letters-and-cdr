@@ -79,7 +79,14 @@
             const tbody = document.getElementById('clientTableBody');
             const cardsContainer = document.getElementById('clientCardsContainer');
 
-            if (!tbody && !cardsContainer) return;
+            if (!tbody && !cardsContainer) {
+                console.error('Neither table body nor cards container found');
+                return;
+            }
+            
+            console.log('Loading client table - clients count:', clients.length);
+            console.log('Table body exists:', !!tbody);
+            console.log('Cards container exists:', !!cardsContainer);
 
             // Desktop table view
             if (tbody) {
@@ -4057,7 +4064,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             
             /* Show mobile menu toggle */
             .mobile-menu-toggle {
-                display: flex;
+                display: flex !important;
+                position: absolute;
+                top: 20px;
+                right: 20px;
             }
             
             /* Header adjustments */
@@ -4069,12 +4079,6 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 align-items: flex-start;
             }
             
-            .mobile-menu-toggle {
-                position: absolute;
-                top: 20px;
-                right: 20px;
-            }
-            
             /* Hide desktop table */
             .master-table {
                 display: none;
@@ -4082,7 +4086,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             
             /* Show mobile cards */
             .client-cards {
-                display: block;
+                display: block !important;
             }
             
             /* Container adjustments */
