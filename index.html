@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Legal Letter Generation System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
+
     <script>
         // ===== GLOBAL STATE =====
         let clients = [];
@@ -13,24 +13,24 @@
         let currentCDRData = null;
         let courtCalendarData = [];
         let currentWeekNumber = null;
-        
+
         // ===== UTILITIES =====
         const formatDate = (dateString) => {
             if (!dateString) return '';
-            return new Date(dateString).toLocaleDateString('en-AU', { 
-                day: 'numeric', month: 'long', year: 'numeric' 
+            return new Date(dateString).toLocaleDateString('en-AU', {
+                day: 'numeric', month: 'long', year: 'numeric'
             });
         };
-        
+
         const getTodayDate = () => new Date().toISOString().split('T')[0];
-        
+
         const getTemplateFileName = (type) => ({
             'CCL': 'CCL_Template.docx',
             'Mention': 'Mention_Template.docx',
             'Final': 'Final_Template.docx',
             'FeeReestimate': 'FeeReestimate_Template.docx'
         }[type] || 'Template.docx');
-        
+
         // ===== DATA MANAGEMENT =====
         const saveData = () => {
             try {
@@ -41,7 +41,7 @@
                 console.log('Storage not available');
             }
         };
-        
+
         const loadSavedData = () => {
             try {
                 if (typeof(Storage) !== "undefined") {
@@ -55,18 +55,18 @@
                 console.log('Storage not available');
             }
         };
-        
+
         // ===== UI UPDATES =====
         const updateDatabaseStatus = (connected) => {
             const status = document.getElementById('databaseStatus');
             if (status) {
-                status.textContent = connected ? 
-                    `Database: Connected (${clients.length} clients)` : 
+                status.textContent = connected ?
+                    `Database: Connected (${clients.length} clients)` :
                     'Database: Not Connected';
                 status.className = `database-status status-${connected ? 'connected' : 'disconnected'}`;
             }
         };
-        
+
         const updateUI = () => {
             loadClientTable();
             loadClientSelect();
@@ -74,16 +74,16 @@
             loadFileNoteClientSelect();
             updateAnalytics();
         };
-        
+
         const loadClientTable = () => {
             const tbody = document.getElementById('clientTableBody');
             const cardsContainer = document.getElementById('clientCardsContainer');
-            
+
             if (!tbody && !cardsContainer) return;
-            
+
             // Desktop table view
             if (tbody) {
-                tbody.innerHTML = clients.length === 0 ? 
+                tbody.innerHTML = clients.length === 0 ?
                     `<tr><td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
                         No clients loaded. Please upload an Excel database or add clients manually.
                     </td></tr>` :
@@ -98,12 +98,12 @@
                             <td>${client.mention ? '✅' : '❌'}</td>
                             <td>${client.final ? '✅' : '❌'}</td>
                             <td>${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</td>
-                            <td><button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" 
+                            <td><button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;"
                                 onclick="selectClientForLetter(${client.id})">Generate Letter</button></td>
                         </tr>
                     `).join('');
             }
-            
+
             // Mobile cards view
             if (cardsContainer) {
                 cardsContainer.innerHTML = clients.length === 0 ?
@@ -111,67 +111,69 @@
                         No clients loaded. Please upload an Excel database or add clients manually.
                     </div>` :
                     clients.map(client => `
-                        <div class="client-card">
+                        <div class="client-card" onclick="toggleClientCard(this)">
                             <div class="client-card-header">
-                                <div class="client-card-name">${client.name}</div>
-                                <span class="status-badge client-card-status status-${client.status.toLowerCase()}">${client.status}</span>
+                                <div class="client-card-main">
+                                    <div class="client-card-name">${client.name}</div>
+                                    <div class="client-card-matter">${client.matterNumber}</div>
+                                    <div class="client-card-status-row">
+                                        <span class="status-badge status-${client.status.toLowerCase()}">${client.status}</span>
+                                    </div>
+                                </div>
+                                <div class="client-card-expand">▼</div>
                             </div>
                             <div class="client-card-details">
                                 <div class="client-card-row">
-                                    <span class="client-card-label">Matter #</span>
-                                    <span class="client-card-value">${client.matterNumber}</span>
-                                </div>
-                                <div class="client-card-row">
                                     <span class="client-card-label">Court</span>
-                                    <span class="client-card-value">${client.court}</span>
+                                    <span class="client-card-value">${client.court || 'Not specified'}</span>
+                                </div>
+                                <div class="client-card-charges">
+                                    <strong>Charges:</strong> ${client.charges || 'No charges listed'}
+                                </div>
+                                <div class="client-card-letters">
+                                    <strong>Letter Status:</strong>
+                                    <div class="client-card-letter-status">
+                                        <span>CCL ${client.ccl ? '✅' : '❌'}</span>
+                                        <span>Mention ${client.mention ? '✅' : '❌'}</span>
+                                        <span>Final ${client.final ? '✅' : '❌'}</span>
+                                    </div>
                                 </div>
                                 <div class="client-card-row">
                                     <span class="client-card-label">Next Court</span>
                                     <span class="client-card-value">${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</span>
                                 </div>
-                                <div class="client-card-row">
-                                    <span class="client-card-label">Letters Sent</span>
-                                    <span class="client-card-value">
-                                        CCL ${client.ccl ? '✅' : '❌'} | 
-                                        Mention ${client.mention ? '✅' : '❌'} | 
-                                        Final ${client.final ? '✅' : '❌'}
-                                    </span>
+                                <div class="client-card-actions">
+                                    <button class="client-card-btn" onclick="event.stopPropagation(); selectClientForLetter(${client.id})">
+                                        Generate Letter
+                                    </button>
                                 </div>
-                            </div>
-                            <div class="client-card-charges">
-                                <strong>Charges:</strong> ${client.charges || 'No charges listed'}
-                            </div>
-                            <div class="client-card-actions">
-                                <button class="btn btn-primary" onclick="selectClientForLetter(${client.id})">
-                                    Generate Letter
-                                </button>
                             </div>
                         </div>
                     `).join('');
             }
         };
-        
+
         const loadClientSelect = () => {
             const select = document.getElementById('clientSelect');
             if (!select) return;
             select.innerHTML = '<option value="">-- Select a Client --</option>' +
                 clients.map(c => `<option value="${c.id}">${c.name} (${c.matterNumber})</option>`).join('');
         };
-        
+
         const loadCDRClientSelect = () => {
             const select = document.getElementById('cdrClientSelect');
             if (!select) return;
             select.innerHTML = '<option value="">-- Manual Entry --</option>' +
                 clients.map(c => `<option value="${c.id}">${c.name} (${c.matterNumber})</option>`).join('');
         };
-        
+
         const loadFileNoteClientSelect = () => {
             const select = document.getElementById('fileNoteClientSelect');
             if (!select) return;
             select.innerHTML = '<option value="">-- Select a Client --</option>' +
                 clients.map(c => `<option value="${c.id}">${c.name} (${c.matterNumber})</option>`).join('');
         };
-        
+
         const updateAnalytics = () => {
             const els = {
                 totalMatters: document.getElementById('totalMatters'),
@@ -179,11 +181,11 @@
                 pendingLetters: document.getElementById('pendingLetters'),
                 upcomingCourt: document.getElementById('upcomingCourt')
             };
-            
+
             if (els.totalMatters) els.totalMatters.textContent = clients.length;
             if (els.activeMatters) els.activeMatters.textContent = clients.filter(c => c.status === 'Active').length;
             if (els.pendingLetters) els.pendingLetters.textContent = clients.filter(c => !c.ccl).length;
-            
+
             const nextWeek = new Date();
             nextWeek.setDate(nextWeek.getDate() + 7);
             const upcoming = clients.filter(c => {
@@ -192,11 +194,11 @@
                 return courtDate <= nextWeek && courtDate >= new Date();
             }).length;
             if (els.upcomingCourt) els.upcomingCourt.textContent = upcoming;
-            
+
             // Court breakdown
             const courtBreakdown = {};
             clients.forEach(c => courtBreakdown[c.court] = (courtBreakdown[c.court] || 0) + 1);
-            
+
             const courtDiv = document.getElementById('courtBreakdown');
             if (courtDiv) {
                 courtDiv.innerHTML = Object.entries(courtBreakdown)
@@ -207,7 +209,7 @@
                         </div>
                     `).join('') || '<p style="color: #6b7280;">No data available</p>';
             }
-            
+
             // Letter status
             const statusDiv = document.getElementById('letterStatusChart');
             if (statusDiv) {
@@ -216,7 +218,7 @@
                     mention: clients.filter(c => c.mention).length,
                     final: clients.filter(c => c.final).length
                 };
-                
+
                 statusDiv.innerHTML = `
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
                         <div style="text-align: center;">
@@ -234,31 +236,31 @@
                     </div>`;
             }
         };
-        
+
         // ===== NAVIGATION =====
         const switchTab = (tabName, event) => {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            
+
             const tabElement = document.getElementById(tabName);
             if (tabElement) tabElement.classList.add('active');
             if (event?.target) event.target.classList.add('active');
-            
+
             if (tabName === 'analytics') updateAnalytics();
             if (tabName === 'calendar') updateCourtCalendar();
         };
-        
+
         // ===== MODAL MANAGEMENT =====
         const openModal = () => document.getElementById('addClientModal').style.display = 'block';
         const closeModal = () => {
             document.getElementById('addClientModal').style.display = 'none';
             document.getElementById('addClientForm').reset();
         };
-        
+
         // ===== CLIENT MANAGEMENT =====
         const addClient = (event) => {
             event.preventDefault();
-            
+
             const newClient = {
                 id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
                 name: document.getElementById('newClientName').value,
@@ -275,61 +277,61 @@
                 final: false,
                 letterHistory: []
             };
-            
+
             clients.push(newClient);
             saveData();
             updateUI();
             closeModal();
             alert('Client added successfully!');
         };
-        
+
         const selectClientForLetter = (clientId) => {
             document.querySelector('.tab:nth-child(2)')?.click();
             document.getElementById('clientSelect').value = clientId;
             loadClientInfo();
         };
-        
+
         // ===== CDR FUNCTIONS =====
         const loadCDRClientInfo = () => {
             const clientId = parseInt(document.getElementById('cdrClientSelect').value);
             const fields = ['cdrClientName', 'cdrFileNumber', 'cdrCourt', 'cdrOutcomeCourt'];
-            
+
             if (!clientId) {
                 fields.forEach(f => document.getElementById(f).value = '');
                 return;
             }
-            
+
             const client = clients.find(c => c.id === clientId);
             if (!client) return;
-            
+
             document.getElementById('cdrClientName').value = client.name;
             document.getElementById('cdrFileNumber').value = client.matterNumber;
             document.getElementById('cdrCourt').value = client.court;
             document.getElementById('cdrOutcomeCourt').value = client.court;
-            
+
             if (client.nextCourt) {
                 document.getElementById('cdrCourtDate').value = client.nextCourt;
             }
         };
-        
+
         const getAllocatedTo = () => {
             const allocated = [];
             document.querySelectorAll('input[id^="allocate_"]:checked').forEach(cb => allocated.push(cb.value));
             return allocated.join(', ') || 'TBD';
         };
-        
+
         const getLetterAllocatedTo = () => {
             const allocated = [];
             document.querySelectorAll('input[id^="letter_allocate_"]:checked').forEach(cb => allocated.push(cb.value));
             return allocated.join(', ') || 'TBD';
         };
-        
+
         const formatCDRText = (data) => {
             return `** ** ** ** **COURT OUTCOME** ** ** **
 COURT: ${data.outcomeCourt}
 DATE: ${formatDate(data.outcomeDate)}
-CORAM: 
-CROWN: 
+CORAM:
+CROWN:
 START: ${data.startTime}
 FINISH: ${data.finishTime}
 
@@ -345,14 +347,14 @@ ALLOCATE TO: ${data.allocateTo}
 CLIENT EXCUSED: ${data.clientExcused ? 'Yes' : 'No'}
 FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITIONAL DATES:\n' + data.additionalDates : ''}`;
         };
-        
+
         const formatCDRHTML = (data) => {
             const row = (label, value) => `
                 <tr>
                     <td style="width: 30%; padding: 5px 10px; font-weight: bold;">${label}:</td>
                     <td style="width: 70%; padding: 5px 10px;">${value || ''}</td>
                 </tr>`;
-            
+
             return `
             <div style="font-family: Arial, sans-serif; font-size: 10pt; color: black;">
                 <p style="text-align: center; font-weight: bold; margin: 20px 0;">COURT OUTCOME</p>
@@ -364,7 +366,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     ${row('START', data.startTime)}
                     ${row('FINISH', data.finishTime)}
                 </table>
-                
+
                 <p style="text-align: center; font-weight: bold; margin: 20px 0;">COURT DIARY REQUEST</p>
                 <table style="border-collapse: collapse; width: 100%; max-width: 650px;">
                     ${row('COURT DATE', formatDate(data.courtDate))}
@@ -381,7 +383,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 </table>
             </div>`;
         };
-        
+
         const generateCDR = () => {
             const cdrData = {
                 outcomeCourt: document.getElementById('cdrOutcomeCourt').value,
@@ -400,47 +402,47 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 feeReminder: document.getElementById('cdrFeeReminder').value,
                 additionalDates: document.getElementById('cdrAdditionalDates')?.value || ''
             };
-            
+
             currentCDRData = cdrData;
             const outputDiv = document.getElementById('cdrOutput');
             outputDiv.textContent = formatCDRText(cdrData);
             outputDiv.style.display = 'block';
         };
-        
+
         const sendToZapier = (isCDROnly = false) => {
             const statusDiv = document.getElementById(isCDROnly ? 'cdrZapierStatus' : 'zapierStatus');
-            
+
             if (isCDROnly && !currentCDRData) {
                 alert('Please generate a CDR first');
                 return;
             }
-            
+
             if (!isCDROnly) {
                 const promptText = document.getElementById('promptOutput').textContent;
                 const letterType = document.getElementById('letterType').value;
-                
+
                 if (!promptText || !currentClient || !letterType) {
                     alert('Please generate a prompt first');
                     return;
                 }
             }
-            
+
             statusDiv.style.display = 'block';
             statusDiv.style.backgroundColor = '#fef3c7';
             statusDiv.style.color = '#92400e';
             statusDiv.textContent = 'Sending to Zapier...';
-            
+
             const hasCDR = isCDROnly || document.getElementById('generateCDRWithLetter')?.checked;
-            
+
             // Format today's date as "day month year" with month written out
             const today = new Date();
             const monthNames = ["January", "February", "March", "April", "May", "June",
                 "July", "August", "September", "October", "November", "December"];
             const formattedDate = `${today.getDate()} ${monthNames[today.getMonth()]} ${today.getFullYear()}`;
-            
+
             // Get selected prefix
             const clientPrefix = document.getElementById('clientPrefix')?.value || '';
-            
+
             const payload = {
                 type: isCDROnly ? 'CDR_ONLY' : (hasCDR ? 'LETTER_AND_CDR' : document.getElementById('letterType').value),
                 letterData: isCDROnly ? null : {
@@ -457,7 +459,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 hasLetter: !isCDROnly,
                 hasCDR: hasCDR
             };
-            
+
             if (hasCDR && currentCDRData) {
                 payload.cdrData = {
                     ...currentCDRData,
@@ -465,10 +467,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     cdrHTML: formatCDRHTML(currentCDRData)
                 };
             }
-            
+
             const formData = new FormData();
             formData.append('data', JSON.stringify(payload));
-            
+
             fetch('https://hooks.zapier.com/hooks/catch/19713185/u47xnci/', {
                 method: 'POST',
                 body: formData
@@ -490,9 +492,9 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 console.error('Zapier error:', error);
             });
         };
-        
+
         const sendCDRToZapier = () => sendToZapier(true);
-        
+
         const clearCDRForm = () => {
             if (confirm('Clear all CDR fields?')) {
                 const defaults = {
@@ -511,7 +513,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     cdrClientExcused: false,
                     cdrFeeReminder: ''
                 };
-                
+
                 Object.entries(defaults).forEach(([id, value]) => {
                     const el = document.getElementById(id);
                     if (el) {
@@ -519,30 +521,30 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         else el.value = value;
                     }
                 });
-                
+
                 document.querySelectorAll('input[id^="allocate_"]').forEach(cb => cb.checked = false);
                 document.getElementById('cdrOutput').style.display = 'none';
                 currentCDRData = null;
             }
         };
-        
+
         // ===== LETTER GENERATION =====
         const loadClientInfo = () => {
             const clientId = parseInt(document.getElementById('clientSelect').value);
             const section = document.getElementById('clientInfoSection');
-            
+
             if (!clientId) {
                 section.style.display = 'none';
                 return;
             }
-            
+
             currentClient = clients.find(c => c.id === clientId);
             if (!currentClient) return;
-            
+
             section.style.display = 'block';
-            
+
             document.getElementById('clientInfoGrid').innerHTML = `
-                ${['name:Client Name', 'address:Address', 'matterNumber:Matter Number', 'court:Court', 
+                ${['name:Client Name', 'address:Address', 'matterNumber:Matter Number', 'court:Court',
                    'matterType:Matter Type', 'charges:Charges', 'legalAid:Legal Aid', 'nextCourt:Next Court']
                    .map(field => {
                        const [key, label] = field.split(':');
@@ -555,7 +557,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                            <div class="info-value">${value || ''}</div>
                        </div>`;
                    }).join('')}`;
-            
+
             const historyList = document.getElementById('letterHistoryList');
             if (currentClient.letterHistory?.length > 0) {
                 historyList.innerHTML = currentClient.letterHistory.map(letter => `
@@ -571,22 +573,22 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 historyList.innerHTML = '<p style="color: #6b7280; font-style: italic;">No letters sent yet</p>';
             }
         };
-        
+
         const updateLetterFields = () => {
             const letterType = document.getElementById('letterType').value;
             const dynamicFields = document.getElementById('dynamicFields');
             const cdrSection = document.getElementById('cdrForLetterSection');
-            
+
             if (!letterType || !currentClient) {
                 dynamicFields.innerHTML = '';
                 if (cdrSection) cdrSection.style.display = 'none';
                 return;
             }
-            
+
             if (cdrSection) cdrSection.style.display = 'block';
-            
+
             let fieldsHTML = '';
-            
+
             switch(letterType) {
                 case 'CCL':
                     fieldsHTML = getCCLFields();
@@ -601,31 +603,31 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     fieldsHTML = getFeeReestimateFields();
                     break;
             }
-            
+
             dynamicFields.innerHTML = fieldsHTML;
-            
+
             // Initialize any conditional logic
             if (letterType === 'CCL') {
                 toggleLegalAidFields();
                 togglePleaOptions();
             }
         };
-        
+
         const toggleCDRFields = () => {
-            document.getElementById('cdrFieldsInLetter').style.display = 
+            document.getElementById('cdrFieldsInLetter').style.display =
                 document.getElementById('generateCDRWithLetter').checked ? 'block' : 'none';
         };
-        
+
         const generatePrompt = () => {
             const letterType = document.getElementById('letterType').value;
-            
+
             if (!letterType || !currentClient) {
                 alert('Please select a client and letter type');
                 return;
             }
-            
+
             let prompt = '';
-            
+
             switch(letterType) {
                 case 'CCL':
                     prompt = generateCCLPrompt();
@@ -640,11 +642,11 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     prompt = generateFeeReestimatePrompt();
                     break;
             }
-            
+
             const outputDiv = document.getElementById('promptOutput');
             outputDiv.textContent = prompt;
             outputDiv.style.display = 'block';
-            
+
             // Update letter history
             if (!currentClient.letterHistory) currentClient.letterHistory = [];
             currentClient.letterHistory.push({
@@ -652,7 +654,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 date: new Date().toISOString().slice(0,10),
                 notes: `Generated ${letterType} prompt`
             });
-            
+
             // Update letter sent status
             switch(letterType) {
                 case 'CCL':
@@ -665,18 +667,18 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     currentClient.final = true;
                     break;
             }
-            
+
             saveData();
             updateUI();
         };
-        
+
         const copyPrompt = () => {
             const promptText = document.getElementById('promptOutput').textContent;
             if (!promptText) {
                 alert('Please generate a prompt first');
                 return;
             }
-            
+
             navigator.clipboard.writeText(promptText).then(() => {
                 alert('Prompt copied to clipboard!');
             }).catch(() => {
@@ -689,7 +691,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 alert('Prompt copied to clipboard!');
             });
         };
-        
+
         const clearForm = () => {
             if (confirm('Clear all fields?')) {
                 document.getElementById('letterType').value = '';
@@ -697,36 +699,36 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 document.getElementById('promptOutput').style.display = 'none';
             }
         };
-        
+
         const updateExcelRecord = () => {
             const letterType = document.getElementById('letterType').value;
-            
+
             if (!currentClient || !letterType) {
                 alert('Please select a client and generate a letter first');
                 return;
             }
-            
+
             const clientIndex = clients.findIndex(c => c.id === currentClient.id);
             if (clientIndex !== -1) {
                 const typeMap = {'CCL': 'ccl', 'Mention': 'mention', 'Final': 'final'};
                 if (typeMap[letterType]) clients[clientIndex][typeMap[letterType]] = true;
-                
+
                 clients[clientIndex].lastUpdated = new Date().toLocaleDateString('en-AU');
-                
+
                 saveData();
                 updateUI();
                 exportToExcel();
-                
+
                 alert(`Excel database updated!\n${letterType} marked as sent for ${currentClient.name}`);
             }
         };
-        
+
         // ===== EXCEL FUNCTIONS =====
         const loadExcelFile = () => {
             const fileInput = document.getElementById('excelFile');
             const file = fileInput.files[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
@@ -734,7 +736,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                    
+
                     clients = jsonData.map((row, index) => ({
                         id: index + 1,
                         name: row['Client Name'] || '',
@@ -752,7 +754,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         nextCourt: row['Next Court Date'] || '',
                         letterHistory: []
                     }));
-                    
+
                     // Try to load CourtCalendar sheet if it exists
                     if (workbook.SheetNames.includes('CourtCalendar')) {
                         const calendarSheet = workbook.Sheets['CourtCalendar'];
@@ -768,14 +770,14 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             weekNumber: parseInt(row['Week_Number']) || 0,
                             dayName: row['Day_Name'] || ''
                         }));
-                        
+
                         // Set current week to the week of today
                         const today = new Date();
                         const startOfYear = new Date(today.getFullYear(), 0, 1);
                         const days = Math.floor((today - startOfYear) / (24 * 60 * 60 * 1000));
                         currentWeekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
                     }
-                    
+
                     saveData();
                     updateUI();
                     updateDatabaseStatus(true);
@@ -790,13 +792,13 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             };
             reader.readAsArrayBuffer(file);
         };
-        
+
         const exportToExcel = () => {
             if (clients.length === 0) {
                 alert('No data to export');
                 return;
             }
-            
+
             const exportData = clients.map(client => ({
                 'Client Name': client.name,
                 'Address': client.address,
@@ -813,19 +815,19 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 'Next Court Date': client.nextCourt,
                 'Last Updated': new Date().toLocaleDateString('en-AU')
             }));
-            
+
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(exportData);
             XLSX.utils.book_append_sheet(wb, ws, 'Clients');
             XLSX.writeFile(wb, `legal_clients_${new Date().toISOString().slice(0,10)}.xlsx`);
         };
-        
+
         // ===== LETTER FIELD GENERATORS =====
         const getCCLFields = () => {
             return `
                 <div class="section">
                     <div class="section-title">Contact Details</div>
-                    
+
                     <div class="form-group">
                         <label for="contactMethod">Contact Method*</label>
                         <select id="contactMethod" required>
@@ -836,27 +838,27 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Police station">Police station</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="contactDate">Contact Date*</label>
                         <input type="date" id="contactDate" value="${getTodayDate()}" required>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Charges</div>
-                    
+
                     <div class="form-group" style="background: #f0f9ff; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
                         <label style="font-weight: 600; color: #0284c7;">Charges from Database:</label>
                         <div style="padding: 8px; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
                             ${currentClient && currentClient.charges ? currentClient.charges : 'No charges loaded from database'}
                         </div>
                     </div>
-                    
+
                     <p style="font-size: 14px; color: #64748b; margin-bottom: 15px;">
                         Select additional charges or modify the existing charges below:
                     </p>
-                    
+
                     <div class="charges-section">
                         <div class="charges-category">
                             <h4>Violence Offences</h4>
@@ -883,7 +885,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="charges-category">
                             <h4>Domestic Violence</h4>
                             <div class="checkbox-group">
@@ -901,7 +903,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="charges-category">
                             <h4>Traffic Offences</h4>
                             <div class="checkbox-group">
@@ -927,7 +929,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="charges-category">
                             <h4>Drug Offences</h4>
                             <div class="checkbox-group">
@@ -941,7 +943,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="charges-category">
                             <h4>Property Offences</h4>
                             <div class="checkbox-group">
@@ -956,21 +958,21 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="additionalCharges">Additional Charges</label>
                         <input type="text" id="additionalCharges" placeholder="Enter any additional charges">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="counts">Number of Counts</label>
                         <input type="number" id="counts" min="1" placeholder="e.g., 3">
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Legal Aid & Fees</div>
-                    
+
                     <div class="form-group">
                         <label for="legalAidStatus">Legal Aid?*</label>
                         <select id="legalAidStatus" onchange="toggleLegalAidFields()" required>
@@ -979,14 +981,14 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="No" ${currentClient && !currentClient.legalAid ? 'selected' : ''}>No</option>
                         </select>
                     </div>
-                    
+
                     <div class="conditional" id="legalAidDetails">
                         <div class="form-group">
                             <label for="contribution">Contribution Amount ($)</label>
                             <input type="number" id="contribution" placeholder="Leave blank if no contribution">
                         </div>
                     </div>
-                    
+
                     <div class="conditional" id="privateDetails">
                         <div class="form-group">
                             <label for="estimate">Estimate Amount ($)*</label>
@@ -1007,10 +1009,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Instructions</div>
-                    
+
                     <div class="form-group">
                         <label for="plea">Plea*</label>
                         <select id="plea" onchange="togglePleaOptions()" required>
@@ -1020,17 +1022,17 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             ${currentClient && currentClient.matterType === 'Criminal - Indictable' ? '<option value="No plea yet (indictable)">No plea yet (indictable)</option>' : ''}
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="clientInstructions">Client Instructions*</label>
                         <textarea id="clientInstructions" placeholder="What are the client's instructions moving forward?" required></textarea>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="nextCourtDate">Next Court Date</label>
                         <input type="date" id="nextCourtDate" value="${currentClient && currentClient.nextCourt ? currentClient.nextCourt : ''}">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="requiredAttend">Client Required to Attend?</label>
                         <select id="requiredAttend">
@@ -1039,7 +1041,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="No">No</option>
                         </select>
                     </div>
-                    
+
                     <div class="conditional" id="sentenceMaterials">
                         <label>Sentence Materials Discussed</label>
                         <div class="checkbox-group">
@@ -1070,10 +1072,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">ADVO Details</div>
-                    
+
                     <div class="form-group">
                         <label for="advoType">ADVO Type</label>
                         <select id="advoType" onchange="toggleADVOFields()">
@@ -1083,13 +1085,13 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Final">Final</option>
                         </select>
                     </div>
-                    
+
                     <div class="conditional" id="advoDetails">
                         <div class="form-group">
                             <label for="pinop">PINOP Name*</label>
                             <input type="text" id="pinop" placeholder="Protected person's name">
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="advoDuration">Duration*</label>
                             <select id="advoDuration">
@@ -1101,7 +1103,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                                 <option value="Indefinite">Indefinite</option>
                             </select>
                         </div>
-                        
+
                         <label>ADVO Conditions (1 is mandatory)</label>
                         <div class="checkbox-group">
                             <div class="checkbox-item">
@@ -1147,10 +1149,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Bail Conditions</div>
-                    
+
                     <div class="form-group">
                         <label for="hasBail">Has Bail Conditions?</label>
                         <select id="hasBail" onchange="toggleBailFields()">
@@ -1158,7 +1160,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Yes">Yes</option>
                         </select>
                     </div>
-                    
+
                     <div class="conditional" id="bailDetails">
                         <label>Select Bail Conditions</label>
                         <select id="bailConditions" multiple class="multi-select">
@@ -1179,14 +1181,14 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Not to drive a motor vehicle">Not to drive</option>
                         </select>
                         <small>Hold Ctrl (or Cmd on Mac) to select multiple</small>
-                        
+
                         <div class="form-group" style="margin-top: 10px;">
                             <label for="additionalBail">Additional Bail Conditions</label>
                             <textarea id="additionalBail" placeholder="Any additional bail conditions"></textarea>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Additional Information</div>
                     <div class="form-group">
@@ -1196,17 +1198,17 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 </div>
             `;
         };
-        
+
         const getMentionFields = () => {
             return `
                 <div class="section">
                     <div class="section-title">Court Appearance Details</div>
-                    
+
                     <div class="form-group">
                         <label for="courtDate">Court Date*</label>
                         <input type="date" id="courtDate" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="whoAppeared">Who Appeared?*</label>
                         <select id="whoAppeared" required>
@@ -1216,7 +1218,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Counsel appeared">Counsel appeared</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="listedFor">Listed For*</label>
                         <select id="listedFor" required>
@@ -1232,21 +1234,21 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Representations">Representations</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="whatOccurred">What Occurred*</label>
                         <textarea id="whatOccurred" placeholder="Brief description of what happened at court" required></textarea>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Next Court Date</div>
-                    
+
                     <div class="form-group">
                         <label for="nextCourtDate">Next Court Date</label>
                         <input type="date" id="nextCourtDate">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="nextListedFor">Next Listed For</label>
                         <select id="nextListedFor">
@@ -1262,7 +1264,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Section 14 Application">Section 14 Application</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="requiredAttend">Client Required to Attend?</label>
                         <select id="requiredAttend">
@@ -1272,15 +1274,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Billing (if applicable)</div>
-                    
+
                     <div class="form-group">
                         <label for="interimInvoice">Interim Invoice Amount ($)</label>
                         <input type="number" id="interimInvoice" placeholder="Leave blank if not applicable">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="invoiceStatus">Invoice Status</label>
                         <select id="invoiceStatus">
@@ -1290,7 +1292,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Additional Information</div>
                     <div class="form-group">
@@ -1300,17 +1302,17 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 </div>
             `;
         };
-        
+
         const getFinalFields = () => {
             return `
                 <div class="section">
                     <div class="section-title">Final Court Appearance</div>
-                    
+
                     <div class="form-group">
                         <label for="courtDate">Court Date*</label>
                         <input type="date" id="courtDate" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="finalListedFor">Matter was Listed For*</label>
                         <select id="finalListedFor" required>
@@ -1322,7 +1324,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Section 14 Application">Section 14 Application</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="whoAppeared">Who Appeared?*</label>
                         <select id="whoAppeared" required>
@@ -1332,15 +1334,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Outcome</div>
-                    
+
                     <div class="form-group">
                         <label for="outcome">Outcome*</label>
                         <textarea id="outcome" placeholder="What was the outcome of the matter?" required></textarea>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="penalty">Penalty/Sentence (if applicable)</label>
                         <select id="penalty" onchange="checkPenaltyType()">
@@ -1357,24 +1359,24 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Charges dismissed">Charges dismissed</option>
                         </select>
                     </div>
-                    
+
                     <div class="conditional" id="penaltyDetails">
                         <div class="form-group">
                             <label for="penaltyLength">Length/Amount</label>
                             <input type="text" id="penaltyLength" placeholder="e.g., $500 fine, 12 months CRO">
                         </div>
-                        
+
                         <div class="form-group" id="conditionsField" style="display: none;">
                             <label for="penaltyConditions">Conditions</label>
                             <textarea id="penaltyConditions" placeholder="List any conditions of the order"></textarea>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="licenseDisqualification">License Disqualification (if applicable)</label>
                         <input type="text" id="licenseDisqualification" placeholder="e.g., 6 months minimum, 12 months automatic">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="interlockOrder">Interlock Order (if applicable)</label>
                         <select id="interlockOrder">
@@ -1385,10 +1387,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="section" id="finalADVOSection">
                     <div class="section-title">Final ADVO (if applicable)</div>
-                    
+
                     <div class="form-group">
                         <label for="finalADVO">ADVO Made Final?</label>
                         <select id="finalADVO" onchange="toggleFinalADVO()">
@@ -1396,13 +1398,13 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Yes">Yes</option>
                         </select>
                     </div>
-                    
+
                     <div class="conditional" id="finalADVODetails">
                         <div class="form-group">
                             <label for="pinop">PINOP Name*</label>
                             <input type="text" id="pinop" placeholder="Protected person's name">
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="advoDuration">Duration*</label>
                             <select id="advoDuration">
@@ -1414,7 +1416,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                                 <option value="Indefinite">Indefinite</option>
                             </select>
                         </div>
-                        
+
                         <label>ADVO Conditions</label>
                         <div class="checkbox-group">
                             <div class="checkbox-item">
@@ -1456,10 +1458,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Appeal Information</div>
-                    
+
                     <div class="form-group">
                         <label for="appealProspects">Appeal Prospects*</label>
                         <select id="appealProspects" required>
@@ -1471,21 +1473,21 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Billing</div>
-                    
+
                     <div class="form-group">
                         <label for="finalInvoiceAmount">Final Invoice Amount ($)</label>
                         <input type="number" id="finalInvoiceAmount" placeholder="Total amount for final invoice">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="outstandingAmount">Outstanding Amount ($)</label>
                         <input type="number" id="outstandingAmount" placeholder="Any amount still owing">
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Additional Information</div>
                     <div class="form-group">
@@ -1495,17 +1497,17 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 </div>
             `;
         };
-        
+
         const getFeeReestimateFields = () => {
             return `
                 <div class="section">
                     <div class="section-title">Conference Details</div>
-                    
+
                     <div class="form-group">
                         <label for="conferenceDate">Conference/Contact Date*</label>
                         <input type="date" id="conferenceDate" value="${getTodayDate()}" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="conferenceType">Conference Type*</label>
                         <select id="conferenceType" required>
@@ -1516,38 +1518,38 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Fee Information</div>
-                    
+
                     <div class="form-group">
                         <label for="originalEstimate">Original Estimate ($)*</label>
                         <input type="number" id="originalEstimate" placeholder="e.g., 3500" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="additionalAmount">Additional Amount ($)*</label>
                         <input type="number" id="additionalAmount" placeholder="e.g., 1500" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>New Total Estimate: $<span id="totalEstimate">0</span></label>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="reasonIncrease">Reason for Increase*</label>
                         <textarea id="reasonIncrease" placeholder="Explain why fees have increased" required></textarea>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Matter Update</div>
-                    
+
                     <div class="form-group">
                         <label for="nextCourtDate">Next Court Date</label>
                         <input type="date" id="nextCourtDate">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="nextListedFor">Listed For</label>
                         <select id="nextListedFor">
@@ -1559,21 +1561,21 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Committal">Committal</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="matterProgress">Matter Progress/What Has Occurred</label>
                         <textarea id="matterProgress" placeholder="Brief update on what has happened in the matter"></textarea>
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Invoice Status</div>
-                    
+
                     <div class="form-group">
                         <label for="interimInvoiceAmount">Interim Invoice Amount ($)</label>
                         <input type="number" id="interimInvoiceAmount" placeholder="Amount of interim invoice">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="interimStatus">Interim Invoice Status</label>
                         <select id="interimStatus">
@@ -1582,13 +1584,13 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             <option value="Outstanding">Outstanding</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="trustDeposit">Trust Deposit Required ($)</label>
                         <input type="number" id="trustDeposit" placeholder="Amount to be deposited in trust">
                     </div>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">Additional Information</div>
                     <div class="form-group">
@@ -1598,63 +1600,63 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 </div>
             `;
         };
-        
+
         // ===== TOGGLE FUNCTIONS =====
         const toggleLegalAidFields = () => {
             const status = document.getElementById('legalAidStatus')?.value;
             const legalAidDetails = document.getElementById('legalAidDetails');
             const privateDetails = document.getElementById('privateDetails');
-            
+
             if (legalAidDetails) legalAidDetails.style.display = status === 'Yes' ? 'block' : 'none';
             if (privateDetails) privateDetails.style.display = status === 'No' ? 'block' : 'none';
         };
-        
+
         const toggleDepositAmount = () => {
             const paid = document.getElementById('depositPaid')?.value;
             const details = document.getElementById('depositDetails');
             if (details) details.style.display = paid === 'Yes' ? 'block' : 'none';
         };
-        
+
         const togglePleaOptions = () => {
             const plea = document.getElementById('plea')?.value;
             const materials = document.getElementById('sentenceMaterials');
             if (materials) materials.style.display = plea === 'Guilty' ? 'block' : 'none';
         };
-        
+
         const toggleADVOFields = () => {
             const advoType = document.getElementById('advoType')?.value;
             const details = document.getElementById('advoDetails');
             if (details) details.style.display = advoType ? 'block' : 'none';
         };
-        
+
         const toggleBailFields = () => {
             const hasBail = document.getElementById('hasBail')?.value;
             const details = document.getElementById('bailDetails');
             if (details) details.style.display = hasBail === 'Yes' ? 'block' : 'none';
         };
-        
+
         const toggleFinalADVO = () => {
             const finalADVO = document.getElementById('finalADVO')?.value;
             const details = document.getElementById('finalADVODetails');
             if (details) details.style.display = finalADVO === 'Yes' ? 'block' : 'none';
         };
-        
+
         const checkPenaltyType = () => {
             const outcome = document.getElementById('finalOutcome')?.value || document.getElementById('penalty')?.value;
             const details = document.getElementById('penaltyDetails');
             const conditions = document.getElementById('conditionsField');
-            
+
             if (details) {
                 const showDetails = outcome && outcome !== 'Not Guilty' && outcome !== 'Charges dismissed';
                 details.style.display = showDetails ? 'block' : 'none';
-                
+
                 if (conditions) {
-                    conditions.style.display = (outcome?.includes('CRO') || outcome?.includes('CCO') || 
+                    conditions.style.display = (outcome?.includes('CRO') || outcome?.includes('CCO') ||
                                                outcome?.includes('ICO')) ? 'block' : 'none';
                 }
             }
         };
-        
+
         // Generate CCL Prompt
         const generateCCLPrompt = () => {
             const contactMethod = document.getElementById('contactMethod')?.value;
@@ -1665,18 +1667,18 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             const clientInstructions = document.getElementById('clientInstructions')?.value;
             const nextCourtDate = document.getElementById('nextCourtDate')?.value;
             const requiredAttend = document.getElementById('requiredAttend')?.value;
-            
+
             let prompt = `Using the CCL template, draft a letter with this information:\n\n`;
             prompt += `CLIENT: ${currentClient.name}\n`;
             prompt += `ADDRESS: ${currentClient.address || 'Not provided'}\n`;
             prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
-            
+
             prompt += `Contact: ${contactMethod} on ${formatDate(contactDate)}\n\n`;
-            
+
             prompt += `COURT: ${currentClient.court}\n`;
             prompt += `MATTER TYPE: ${currentClient.matterType}\n`;
             prompt += `CHARGES: ${charges}\n\n`;
-            
+
             // Legal Aid status
             if (legalAid === 'Yes') {
                 prompt += `LEGAL AID: Yes`;
@@ -1691,10 +1693,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 }
             }
             prompt += `\n\n`;
-            
+
             prompt += `PLEA: ${plea}\n`;
             prompt += `CLIENT INSTRUCTIONS: ${clientInstructions}\n`;
-            
+
             if (nextCourtDate) {
                 prompt += `NEXT COURT DATE: ${formatDate(nextCourtDate)}`;
                 if (requiredAttend) {
@@ -1702,7 +1704,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 }
                 prompt += `\n`;
             }
-            
+
             // Sentence materials (if guilty plea)
             if (plea === 'Guilty') {
                 const materials = getSelectedMaterials();
@@ -1710,7 +1712,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     prompt += `\nSENTENCE MATERIALS DISCUSSED: ${materials}\n`;
                 }
             }
-            
+
             // ADVO details
             const advoType = document.getElementById('advoType')?.value;
             if (advoType) {
@@ -1719,7 +1721,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 const conditions = getADVOConditions();
                 prompt += `\nCONDITIONS: ${conditions}\n`;
             }
-            
+
             // Bail conditions
             if (document.getElementById('hasBail')?.value === 'Yes') {
                 const bailConditions = getBailConditions();
@@ -1727,16 +1729,16 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     prompt += `\nBAIL CONDITIONS: ${bailConditions}\n`;
                 }
             }
-            
+
             // Additional information
             const additionalInfo = document.getElementById('additionalInfo')?.value;
             if (additionalInfo) {
                 prompt += `\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
             }
-            
+
             return prompt;
         };
-        
+
         // Generate Mention Prompt
         const generateMentionPrompt = () => {
             const courtDate = document.getElementById('courtDate')?.value;
@@ -1746,19 +1748,19 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             const nextCourtDate = document.getElementById('nextCourtDate')?.value;
             const nextListedFor = document.getElementById('nextListedFor')?.value;
             const requiredAttend = document.getElementById('requiredAttend')?.value;
-            
+
             let prompt = `Using the Mention Letter template, draft a letter with this information:\n\n`;
             prompt += `CLIENT: ${currentClient.name}\n`;
             prompt += `ADDRESS: ${currentClient.address || 'Not provided'}\n`;
             prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
-            
+
             prompt += `COURT: ${currentClient.court}\n`;
             prompt += `Date of appearance: ${formatDate(courtDate)}\n`;
             prompt += `Listed for: ${listedFor}\n`;
             prompt += `Who appeared: ${whoAppeared}\n\n`;
-            
+
             prompt += `WHAT OCCURRED: ${whatOccurred}\n\n`;
-            
+
             if (nextCourtDate) {
                 prompt += `NEXT DATE: ${formatDate(nextCourtDate)}`;
                 if (nextListedFor) {
@@ -1769,7 +1771,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     prompt += `Client ${requiredAttend === 'Yes' ? 'required' : 'not required'} to attend\n`;
                 }
             }
-            
+
             // Billing info if applicable
             const interimInvoice = document.getElementById('interimInvoice')?.value;
             if (interimInvoice) {
@@ -1780,15 +1782,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 }
                 prompt += `\n`;
             }
-            
+
             const additionalInfo = document.getElementById('additionalInfo')?.value;
             if (additionalInfo) {
                 prompt += `\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
             }
-            
+
             return prompt;
         };
-        
+
         // Generate Final Prompt
         const generateFinalPrompt = () => {
             const courtDate = document.getElementById('courtDate')?.value;
@@ -1798,39 +1800,39 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             const penalty = document.getElementById('penalty')?.value;
             const penaltyLength = document.getElementById('penaltyLength')?.value;
             const appealProspects = document.getElementById('appealProspects')?.value;
-            
+
             let prompt = `Using the Final Letter template, draft a letter with this information:\n\n`;
             prompt += `CLIENT: ${currentClient.name}\n`;
             prompt += `ADDRESS: ${currentClient.address || 'Not provided'}\n`;
             prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
-            
+
             prompt += `COURT: ${currentClient.court}\n`;
             prompt += `Date: ${formatDate(courtDate)}\n`;
             prompt += `Matter was listed for: ${finalListedFor}\n\n`;
-            
+
             prompt += `CHARGES: ${currentClient.charges}\n\n`;
-            
+
             if (whoAppeared === 'Counsel appeared') {
                 prompt += `REPRESENTATION: Counsel appeared (need name)\n`;
             } else {
                 prompt += `REPRESENTATION: I appeared\n`;
             }
-            
+
             prompt += `\nOUTCOME: ${outcome}\n`;
-            
+
             if (penalty) {
                 prompt += `\nPENALTY: ${penalty}`;
                 if (penaltyLength) {
                     prompt += ` - ${penaltyLength}`;
                 }
                 prompt += `\n`;
-                
+
                 const conditions = document.getElementById('penaltyConditions')?.value;
                 if (conditions) {
                     prompt += `CONDITIONS: ${conditions}\n`;
                 }
             }
-            
+
             // License disqualification
             const license = document.getElementById('licenseDisqualification')?.value;
             if (license) {
@@ -1840,7 +1842,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     prompt += `INTERLOCK ORDER: ${interlock}\n`;
                 }
             }
-            
+
             // ADVO if final
             if (document.getElementById('finalADVO')?.value === 'Yes') {
                 const pinop = document.getElementById('pinop')?.value;
@@ -1849,9 +1851,9 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 prompt += `\nADVO made final for ${pinop} (${duration})\n`;
                 prompt += `CONDITIONS: ${conditions}\n`;
             }
-            
+
             prompt += `\nAPPEAL PROSPECTS: ${appealProspects}\n`;
-            
+
             // Billing
             if (currentClient.legalAid) {
                 prompt += `\nLEGAL AID MATTER`;
@@ -1869,15 +1871,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     prompt += ` - Outstanding: ${outstanding}`;
                 }
             }
-            
+
             const additionalInfo = document.getElementById('additionalInfo')?.value;
             if (additionalInfo) {
                 prompt += `\n\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
             }
-            
+
             return prompt;
         };
-        
+
         // Generate Fee Re-estimate Prompt
         const generateFeeReestimatePrompt = () => {
             const conferenceDate = document.getElementById('conferenceDate')?.value;
@@ -1887,17 +1889,17 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             const reasonIncrease = document.getElementById('reasonIncrease')?.value;
             const nextCourtDate = document.getElementById('nextCourtDate')?.value;
             const nextListedFor = document.getElementById('nextListedFor')?.value;
-            
+
             let prompt = `Using the Fee Re-estimate Letter template, draft a letter with this information:\n\n`;
             prompt += `CLIENT: ${currentClient.name}\n`;
             prompt += `ADDRESS: ${currentClient.address || 'Not provided'}\n`;
             prompt += `MATTER REF: ${currentClient.matterNumber}\n\n`;
-            
+
             prompt += `Conference date: ${formatDate(conferenceDate)}\n`;
             prompt += `Conference type: ${conferenceType}\n\n`;
-            
+
             prompt += `COURT: ${currentClient.court}\n`;
-            
+
             if (nextCourtDate) {
                 prompt += `Next court date: ${formatDate(nextCourtDate)}`;
                 if (nextListedFor) {
@@ -1905,19 +1907,19 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 }
                 prompt += `\n`;
             }
-            
+
             const total = (parseFloat(originalEstimate) || 0) + (parseFloat(additionalAmount) || 0);
             prompt += `\nOriginal estimate: ${originalEstimate}\n`;
             prompt += `Additional amount: ${additionalAmount}\n`;
             prompt += `New total estimate: ${total}\n`;
             prompt += `Reason for increase: ${reasonIncrease}\n`;
-            
+
             // Matter progress
             const progress = document.getElementById('matterProgress')?.value;
             if (progress) {
                 prompt += `\nMatter progress: ${progress}\n`;
             }
-            
+
             // Invoice status
             const interimAmount = document.getElementById('interimInvoiceAmount')?.value;
             if (interimAmount) {
@@ -1928,55 +1930,55 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 }
                 prompt += `\n`;
             }
-            
+
             // Trust deposit
             const trustDeposit = document.getElementById('trustDeposit')?.value;
             if (trustDeposit) {
                 prompt += `Trust deposit required: ${trustDeposit}\n`;
             }
-            
+
             if (currentClient.matterType?.includes('Criminal')) {
                 prompt += `\nNote: This is a criminal matter (use criminal variable list in paragraph 27)\n`;
             }
-            
+
             const additionalInfo = document.getElementById('additionalInfo')?.value;
             if (additionalInfo) {
                 prompt += `\nADDITIONAL INFORMATION: ${additionalInfo}\n`;
             }
-            
+
             return prompt;
         };
-        
+
         // Helper functions for collecting form data
         const getSelectedCharges = () => {
             const charges = [];
-            
+
             // Start with charges from Excel/database if they exist
             if (currentClient && currentClient.charges) {
                 charges.push(currentClient.charges);
             }
-            
+
             // Add any selected checkbox charges
             document.querySelectorAll('input[type="checkbox"][id^="charge_"]:checked').forEach(cb => {
                 charges.push(cb.value);
             });
-            
+
             // Add any additional charges typed in
             const additional = document.getElementById('additionalCharges')?.value;
             if (additional) charges.push(additional);
-            
+
             // Join all charges and remove duplicates
             let allCharges = charges.join(', ');
-            
+
             // Add count information if provided
             const counts = document.getElementById('counts')?.value;
             if (counts && counts > 1) {
                 allCharges += ` (${counts} counts)`;
             }
-            
+
             return allCharges || 'No charges specified';
         };
-        
+
         const getSelectedMaterials = () => {
             const materials = [];
             document.querySelectorAll('input[type="checkbox"][id^="mat_"]:checked').forEach(cb => {
@@ -1984,7 +1986,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             });
             return materials.join(', ');
         };
-        
+
         const getADVOConditions = () => {
             const conditions = ['1 (mandatory)'];
             document.querySelectorAll('input[type="checkbox"][id^="advo_"]:checked').forEach(cb => {
@@ -1992,7 +1994,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             });
             return conditions.join(', ');
         };
-        
+
         const getFinalADVOConditions = () => {
             const conditions = ['1 (mandatory)'];
             document.querySelectorAll('input[type="checkbox"][id^="final_advo_"]:checked').forEach(cb => {
@@ -2000,28 +2002,28 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             });
             return conditions.join(', ');
         };
-        
+
         const getBailConditions = () => {
             const select = document.getElementById('bailConditions');
             if (!select) return '';
             const selected = Array.from(select.selectedOptions).map(opt => opt.value);
-            
+
             const additional = document.getElementById('additionalBail')?.value;
             if (additional) selected.push(additional);
-            
+
             return selected.join(', ');
         };
-        
+
         // ===== COURT CALENDAR FUNCTIONS =====
         const updateCourtCalendar = () => {
             if (!courtCalendarData || courtCalendarData.length === 0) {
                 document.getElementById('weekHeader').innerHTML = '<p style="text-align: center; color: #6b7280;">No calendar data loaded. Please upload an Excel file with a CourtCalendar sheet.</p>';
                 return;
             }
-            
+
             // Filter data for current week
             const weekData = courtCalendarData.filter(item => item.weekNumber === currentWeekNumber);
-            
+
             if (weekData.length === 0) {
                 document.getElementById('weekHeader').innerHTML = `<h3>Week ${currentWeekNumber}: No court appearances scheduled</h3>`;
                 document.getElementById('weekGrid').innerHTML = '';
@@ -2029,21 +2031,21 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 document.getElementById('weekTotals').innerHTML = '';
                 return;
             }
-            
+
             // Get week date range
             const weekDates = weekData.map(item => new Date(item.date));
             const minDate = new Date(Math.min(...weekDates));
             const maxDate = new Date(Math.max(...weekDates));
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            
+
             document.getElementById('weekHeader').innerHTML = `
                 <h3>Week ${currentWeekNumber}: ${monthNames[minDate.getMonth()]} ${minDate.getDate()}-${maxDate.getDate()}, ${minDate.getFullYear()}</h3>
             `;
-            
+
             // Create daily summaries
             const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
             const dailySummaries = {};
-            
+
             days.forEach(day => {
                 const dayData = weekData.filter(item => item.dayName === day);
                 dailySummaries[day] = {
@@ -2052,15 +2054,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     totalHours: dayData.reduce((sum, item) => sum + item.durationHours, 0)
                 };
             });
-            
+
             // Create week grid
             let gridHTML = '<div class="week-grid-container">';
             days.forEach(day => {
                 const summary = dailySummaries[day];
-                const colorClass = summary.count === 0 ? 'day-empty' : 
-                                  summary.count <= 2 ? 'day-light' : 
+                const colorClass = summary.count === 0 ? 'day-empty' :
+                                  summary.count <= 2 ? 'day-light' :
                                   summary.count <= 4 ? 'day-medium' : 'day-heavy';
-                
+
                 gridHTML += `
                     <div class="day-card ${colorClass}" onclick="toggleDayDetails('${day}')">
                         <div class="day-header">${day}</div>
@@ -2073,7 +2075,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             });
             gridHTML += '</div>';
             document.getElementById('weekGrid').innerHTML = gridHTML;
-            
+
             // Create daily details
             let detailsHTML = '<div class="daily-details-container">';
             days.forEach(day => {
@@ -2085,13 +2087,13 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         const timeB = new Date(b.date);
                         return timeA - timeB;
                     });
-                    
+
                     detailsHTML += `
                         <div class="day-details" id="details-${day}">
                             <h4>${day}</h4>
                             <div class="matters-list">
                     `;
-                    
+
                     sortedMatters.forEach(matter => {
                         const matterDate = new Date(matter.date);
                         const timeStr = matterDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -2105,7 +2107,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             </div>
                         `;
                     });
-                    
+
                     detailsHTML += `
                             </div>
                         </div>
@@ -2114,11 +2116,11 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             });
             detailsHTML += '</div>';
             document.getElementById('dailyDetails').innerHTML = detailsHTML;
-            
+
             // Calculate week totals
             const weekTotalMatters = weekData.length;
             const weekTotalHours = weekData.reduce((sum, item) => sum + item.durationHours, 0);
-            
+
             document.getElementById('weekTotals').innerHTML = `
                 <div class="week-summary">
                     <h4>Week Totals</h4>
@@ -2135,10 +2137,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 </div>
             `;
         };
-        
+
         const navigateWeek = (direction) => {
             if (!courtCalendarData || courtCalendarData.length === 0) return;
-            
+
             if (direction === 'current') {
                 // Set to current week
                 const today = new Date();
@@ -2150,10 +2152,10 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             } else if (direction === 'next') {
                 currentWeekNumber = Math.min(52, currentWeekNumber + 1);
             }
-            
+
             updateCourtCalendar();
         };
-        
+
         const toggleDayDetails = (day) => {
             const details = document.getElementById(`details-${day}`);
             if (details) {
@@ -2164,27 +2166,27 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 }
             }
         };
-        
+
         // ===== SUPABASE UPLOAD FUNCTION =====
         async function uploadToSupabase() {
             const SUPABASE_URL = 'https://mtqigmqynrpsoaiplsho.supabase.co';
             const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10cWlnbXF5bnJwc29haXBsc2hvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5NzU0NTMsImV4cCI6MjA3MDU1MTQ1M30.f71vQrugWqL2xaQEyX0uAaBhxEKdRa66s_u4zZiKaMk';
             const FIRM_ID = '1938adc8-04ff-43a6-9404-5e7a80ce3e44'; // Alexander Georgieff's firm ID
             const USER_ID = 'ce79738f-a7a9-4b99-9f41-3e539f2583ea'; // Alexander Georgieff's user ID
-            
+
             if (!clients || clients.length === 0) {
                 alert('No clients loaded. Please upload an Excel file first.');
                 return;
             }
-            
+
             // Validation: Credentials are now properly configured
-            
+
             let successCount = 0;
             let errorCount = 0;
             const errors = [];
-            
+
             console.log(`Starting upload of ${clients.length} clients to Supabase...`);
-            
+
             for (const client of clients) {
                 try {
                     // Create client record
@@ -2203,14 +2205,14 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             created_by: USER_ID
                         })
                     });
-                    
+
                     if (!clientResponse.ok) {
                         throw new Error(`Failed to create client ${client.name}: ${clientResponse.statusText}`);
                     }
-                    
+
                     const clientData = await clientResponse.json();
                     const clientId = Array.isArray(clientData) ? clientData[0].id : clientData.id;
-                    
+
                     // Create matter for this client
                     const matterResponse = await fetch(`${SUPABASE_URL}/rest/v1/matters`, {
                         method: 'POST',
@@ -2235,21 +2237,21 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             created_by: USER_ID
                         })
                     });
-                    
+
                     if (!matterResponse.ok) {
                         throw new Error(`Failed to create matter for ${client.name}: ${matterResponse.statusText}`);
                     }
-                    
+
                     successCount++;
                     console.log(`✓ Uploaded client ${successCount}/${clients.length}: ${client.name}`);
-                    
+
                 } catch (error) {
                     errorCount++;
                     errors.push(`${client.name}: ${error.message}`);
                     console.error(`✗ Error uploading ${client.name}:`, error);
                 }
             }
-            
+
             // Display results
             let message = `Upload complete!\n\nSuccessfully uploaded: ${successCount} clients\n`;
             if (errorCount > 0) {
@@ -2260,20 +2262,20 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     message += `First 5 errors:\n${errors.slice(0, 5).join('\n')}\n(Check console for all errors)`;
                 }
             }
-            
+
             alert(message);
             console.log('Upload summary:', { successCount, errorCount, errors });
         }
-        
+
         // ===== FILE NOTE FUNCTIONS =====
         const toggleFileNoteType = () => {
             const noteType = document.querySelector('input[name="noteType"]:checked')?.value;
-            
+
             // Hide all sections first
             document.getElementById('fileNoteGeneralSection').style.display = 'none';
             document.getElementById('fileNoteCourtSection').style.display = 'none';
             document.getElementById('fileNoteEmailSection').style.display = 'none';
-            
+
             // Show relevant section
             if (noteType === 'general') {
                 document.getElementById('fileNoteGeneralSection').style.display = 'block';
@@ -2282,7 +2284,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             } else if (noteType === 'email') {
                 document.getElementById('fileNoteEmailSection').style.display = 'block';
             }
-            
+
             // Reset fields in hidden sections
             if (noteType !== 'general') {
                 document.getElementById('contactType').value = '';
@@ -2295,7 +2297,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 document.getElementById('followUpNo').checked = true;
                 document.getElementById('followUpDetails').style.display = 'none';
             }
-            
+
             if (noteType !== 'court') {
                 document.getElementById('courtLocation').value = '';
                 document.getElementById('listedFor').value = '';
@@ -2307,7 +2309,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 document.getElementById('multipleMatters').checked = false;
                 document.getElementById('multipleMattersSection').style.display = 'none';
             }
-            
+
             if (noteType !== 'email') {
                 document.getElementById('otherParties').value = '';
                 document.getElementById('subjectMatter').value = '';
@@ -2318,14 +2320,14 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 document.getElementById('responseDateSection').style.display = 'none';
             }
         };
-        
+
         const toggleFileNoteClientSelection = () => {
             const source = document.querySelector('input[name="fileNoteClientSource"]:checked')?.value;
-            
+
             if (source === 'database') {
                 document.getElementById('fileNoteDatabaseSelection').style.display = 'block';
                 document.getElementById('fileNoteManualEntry').style.display = 'none';
-                
+
                 // Load client dropdown
                 const select = document.getElementById('fileNoteClientSelect');
                 select.innerHTML = '<option value="">-- Select a Client --</option>' +
@@ -2333,7 +2335,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             } else {
                 document.getElementById('fileNoteDatabaseSelection').style.display = 'none';
                 document.getElementById('fileNoteManualEntry').style.display = 'block';
-                
+
                 // Clear manual fields
                 document.getElementById('fileNoteManualName').value = '';
                 document.getElementById('fileNoteManualMatter').value = '';
@@ -2341,20 +2343,20 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 document.getElementById('fileNoteManualCharges').value = '';
             }
         };
-        
+
         const loadFileNoteClientInfo = () => {
             const clientId = parseInt(document.getElementById('fileNoteClientSelect').value);
             if (!clientId) return;
-            
+
             const client = clients.find(c => c.id === clientId);
             if (!client) return;
-            
+
             // Auto-populate court field if in court appearance mode
             if (document.querySelector('input[name="noteType"]:checked')?.value === 'court') {
                 document.getElementById('courtLocation').value = client.court || '';
             }
         };
-        
+
         const toggleFollowUpDetails = () => {
             const followUp = document.querySelector('input[name="followUp"]:checked')?.value;
             document.getElementById('followUpDetails').style.display = followUp === 'yes' ? 'block' : 'none';
@@ -2362,7 +2364,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 document.getElementById('followUpText').value = '';
             }
         };
-        
+
         const toggleMultipleMatters = () => {
             const checked = document.getElementById('multipleMatters').checked;
             document.getElementById('multipleMattersSection').style.display = checked ? 'block' : 'none';
@@ -2372,11 +2374,11 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 document.getElementById('multipleMatterFields').innerHTML = '';
             }
         };
-        
+
         const updateMultipleMatterFields = () => {
             const count = parseInt(document.getElementById('numberOfMatters').value) || 2;
             const container = document.getElementById('multipleMatterFields');
-            
+
             let html = '';
             for (let i = 1; i <= count; i++) {
                 html += `
@@ -2399,7 +2401,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             }
             container.innerHTML = html;
         };
-        
+
         const toggleResponseDate = () => {
             const response = document.querySelector('input[name="responseRequired"]:checked')?.value;
             document.getElementById('responseDateSection').style.display = response === 'yes' ? 'block' : 'none';
@@ -2407,11 +2409,11 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 document.getElementById('responseDate').value = '';
             }
         };
-        
+
         const generateFileNotePrompt = () => {
             const noteType = document.querySelector('input[name="noteType"]:checked')?.value;
             const source = document.querySelector('input[name="fileNoteClientSource"]:checked')?.value;
-            
+
             // Get client info
             let clientName, matterNumber, court, charges;
             if (source === 'database') {
@@ -2431,26 +2433,26 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 court = document.getElementById('fileNoteManualCourt').value;
                 charges = document.getElementById('fileNoteManualCharges').value;
             }
-            
-            if (!clientName || !matterNumber) {
-                alert('Please provide client name and matter reference');
+
+            if (!clientName) {
+                alert('Please provide client name');
                 return;
             }
-            
+
             const date = document.getElementById('fileNoteDate').value;
             const startTime = document.getElementById('fileNoteStartTime').value;
             const endTime = document.getElementById('fileNoteEndTime').value;
             const urgent = document.getElementById('urgentFollowUp').checked;
-            
+
             let prompt = `FILE NOTE\n\n`;
             prompt += `Client: ${clientName}\n`;
-            prompt += `Matter Reference: ${matterNumber}\n`;
+            if (matterNumber) prompt += `Matter Reference: ${matterNumber}\n`;
             if (court) prompt += `Court: ${court}\n`;
             if (charges) prompt += `Charges: ${charges}\n`;
             prompt += `Date: ${date ? formatDate(date) : 'Not specified'}\n`;
             if (startTime) prompt += `Time: ${startTime}${endTime ? ` - ${endTime}` : ''}\n`;
             prompt += `\n`;
-            
+
             // Add type-specific content
             if (noteType === 'general') {
                 const contactType = document.getElementById('contactType').value;
@@ -2462,32 +2464,32 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 const nextSteps = document.getElementById('nextSteps').value;
                 const followUp = document.querySelector('input[name="followUp"]:checked')?.value;
                 const followUpText = document.getElementById('followUpText').value;
-                
+
                 prompt += `TYPE: ${contactType || 'Meeting/Conference'}\n`;
                 if (whoPresent) prompt += `Present: ${whoPresent}\n`;
                 if (purpose) prompt += `Purpose: ${purpose}\n`;
                 prompt += `\n`;
-                
+
                 if (discussion) {
                     prompt += `DISCUSSION:\n${discussion}\n\n`;
                 }
-                
+
                 if (instructions) {
                     prompt += `CLIENT INSTRUCTIONS:\n${instructions}\n\n`;
                 }
-                
+
                 if (documents) {
                     prompt += `DOCUMENTS HANDLED:\n${documents}\n\n`;
                 }
-                
+
                 if (nextSteps) {
                     prompt += `NEXT STEPS:\n${nextSteps}\n\n`;
                 }
-                
+
                 if (followUp === 'yes' && followUpText) {
                     prompt += `FOLLOW-UP REQUIRED:\n${followUpText}\n\n`;
                 }
-                
+
             } else if (noteType === 'court') {
                 const courtLocation = document.getElementById('courtLocation').value;
                 const listedFor = document.getElementById('listedFor').value;
@@ -2499,7 +2501,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 const nextCourt = document.getElementById('nextCourtDateFileNote').value;
                 const instructionsConfirmed = document.querySelector('input[name="instructionsConfirmed"]:checked')?.value;
                 const multipleMatters = document.getElementById('multipleMatters').checked;
-                
+
                 prompt += `TYPE: Court Appearance\n`;
                 prompt += `Court: ${courtLocation || court || 'Not specified'}\n`;
                 if (listedFor) prompt += `Listed For: ${listedFor}\n`;
@@ -2511,7 +2513,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     prompt += `${attendanceText}\n`;
                 }
                 prompt += `\n`;
-                
+
                 if (multipleMatters) {
                     const count = parseInt(document.getElementById('numberOfMatters').value) || 2;
                     prompt += `MULTIPLE MATTERS DEALT WITH:\n`;
@@ -2519,7 +2521,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         const name = document.getElementById(`matter${i}Name`)?.value;
                         const occurred = document.getElementById(`matter${i}Occurred`)?.value;
                         const matterOutcome = document.getElementById(`matter${i}Outcome`)?.value;
-                        
+
                         if (name || occurred || matterOutcome) {
                             prompt += `\nMatter ${i}: ${name || 'Not specified'}\n`;
                             if (occurred) prompt += `What Occurred: ${occurred}\n`;
@@ -2528,27 +2530,27 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     }
                     prompt += `\n`;
                 }
-                
+
                 if (whatOccurred) {
                     prompt += `WHAT OCCURRED:\n${whatOccurred}\n\n`;
                 }
-                
+
                 if (prosecution) {
                     prompt += `PROSECUTION POSITION:\n${prosecution}\n\n`;
                 }
-                
+
                 if (outcome) {
                     prompt += `OUTCOME:\n${outcome}\n\n`;
                 }
-                
+
                 if (nextCourt) {
                     prompt += `NEXT COURT DATE: ${formatDate(nextCourt)}\n\n`;
                 }
-                
+
                 if (instructionsConfirmed) {
                     prompt += `Instructions ${instructionsConfirmed === 'yes' ? 'confirmed' : 'to be confirmed'} with client\n\n`;
                 }
-                
+
             } else if (noteType === 'email') {
                 const direction = document.querySelector('input[name="emailDirection"]:checked')?.value;
                 const otherParties = document.getElementById('otherParties').value;
@@ -2558,7 +2560,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 const responseRequired = document.querySelector('input[name="responseRequired"]:checked')?.value;
                 const responseDate = document.getElementById('responseDate').value;
                 const action = document.getElementById('actionRequired').value;
-                
+
                 prompt += `TYPE: Email/Correspondence\n`;
                 if (direction) {
                     const dirText = direction === 'sent' ? 'Sent to' :
@@ -2568,39 +2570,39 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 }
                 if (subject) prompt += `Subject: ${subject}\n`;
                 prompt += `\n`;
-                
+
                 if (keyPoints) {
                     prompt += `KEY POINTS:\n${keyPoints}\n\n`;
                 }
-                
+
                 if (attachments) {
                     prompt += `ATTACHMENTS:\n${attachments}\n\n`;
                 }
-                
+
                 if (responseRequired === 'yes' && responseDate) {
                     prompt += `RESPONSE REQUIRED BY: ${formatDate(responseDate)}\n\n`;
                 }
-                
+
                 if (action) {
                     prompt += `ACTION REQUIRED:\n${action}\n\n`;
                 }
             }
-            
+
             if (urgent) {
                 prompt += `*** URGENT FOLLOW-UP REQUIRED ***\n\n`;
             }
-            
+
             prompt += `File note prepared by: [Solicitor Name]\n`;
             prompt += `Time recorded: ${calculateTimeUnits(startTime, endTime)} units`;
-            
+
             // Store the generated prompt
             currentFileNotePrompt = prompt;
-            
+
             // Display the prompt
             const output = document.getElementById('fileNoteOutput');
             output.innerHTML = `<pre>${prompt}</pre>`;
             output.style.display = 'block';
-            
+
             // Update client's file note history if from database
             if (source === 'database') {
                 const clientId = parseInt(document.getElementById('fileNoteClientSelect').value);
@@ -2616,26 +2618,26 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 }
             }
         };
-        
+
         const calculateTimeUnits = (startTime, endTime) => {
             if (!startTime || !endTime) return '0';
-            
+
             const start = new Date(`2000-01-01T${startTime}`);
             const end = new Date(`2000-01-01T${endTime}`);
             const diffMinutes = (end - start) / 60000;
-            
+
             // Convert to 6-minute units (0.1 hour units)
             return Math.ceil(diffMinutes / 6);
         };
-        
+
         let currentFileNotePrompt = '';
-        
+
         const copyFileNotePrompt = () => {
             if (!currentFileNotePrompt) {
                 alert('Please generate a file note first');
                 return;
             }
-            
+
             navigator.clipboard.writeText(currentFileNotePrompt).then(() => {
                 alert('File note copied to clipboard!');
             }).catch(err => {
@@ -2643,16 +2645,16 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 console.error('Copy failed:', err);
             });
         };
-        
+
         const sendFileNoteToZapier = async () => {
             if (!currentFileNotePrompt) {
                 alert('Please generate a file note first');
                 return;
             }
-            
+
             const noteType = document.querySelector('input[name="noteType"]:checked')?.value;
             const source = document.querySelector('input[name="fileNoteClientSource"]:checked')?.value;
-            
+
             let clientName, matterNumber;
             if (source === 'database') {
                 const clientId = parseInt(document.getElementById('fileNoteClientSelect').value);
@@ -2663,16 +2665,16 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 clientName = document.getElementById('fileNoteManualName').value;
                 matterNumber = document.getElementById('fileNoteManualMatter').value;
             }
-            
+
             const statusDiv = document.getElementById('fileNoteZapierStatus');
             statusDiv.style.display = 'block';
             statusDiv.style.background = '#3b82f6';
             statusDiv.style.color = 'white';
             statusDiv.innerHTML = 'Sending to Zapier...';
-            
+
             try {
                 const webhookUrl = 'https://hooks.zapier.com/hooks/catch/19713185/u47xnci/'; // Replace with actual webhook
-                
+
                 const payload = {
                     type: 'FILE_NOTE',
                     fileNoteType: noteType,
@@ -2689,21 +2691,21 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         // Include all relevant form data based on note type
                     }
                 };
-                
+
                 const formData = new FormData();
                 Object.keys(payload).forEach(key => {
                     formData.append(key, typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]);
                 });
-                
+
                 const response = await fetch(webhookUrl, {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 if (response.ok) {
                     statusDiv.style.background = '#16a34a';
                     statusDiv.innerHTML = '✅ File note sent to Zapier successfully!';
-                    
+
                     // Update database if successful and from database
                     if (source === 'database') {
                         const clientId = parseInt(document.getElementById('fileNoteClientSelect').value);
@@ -2718,7 +2720,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                             saveData();
                         }
                     }
-                    
+
                     setTimeout(() => {
                         statusDiv.style.display = 'none';
                     }, 5000);
@@ -2731,24 +2733,24 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 console.error('Zapier error:', error);
             }
         };
-        
+
         const clearFileNoteForm = () => {
             if (!confirm('Are you sure you want to clear all form data?')) return;
-            
+
             // Reset note type to general
             document.getElementById('noteTypeGeneral').checked = true;
             toggleFileNoteType();
-            
+
             // Reset client selection
             document.getElementById('fileNoteClientDatabase').checked = true;
             toggleFileNoteClientSelection();
             document.getElementById('fileNoteClientSelect').value = '';
-            
+
             // Clear all date/time fields
             document.getElementById('fileNoteDate').value = '';
             document.getElementById('fileNoteStartTime').value = '';
             document.getElementById('fileNoteEndTime').value = '';
-            
+
             // Clear all form fields in all sections
             const formElements = document.querySelectorAll('#filenote input[type="text"], #filenote input[type="date"], #filenote input[type="time"], #filenote textarea, #filenote select');
             formElements.forEach(element => {
@@ -2758,35 +2760,99 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     element.value = '';
                 }
             });
-            
+
             // Reset radio buttons to defaults
             document.getElementById('followUpNo').checked = true;
             document.getElementById('responseNo').checked = true;
-            
+
             // Hide conditional sections
             document.getElementById('followUpDetails').style.display = 'none';
             document.getElementById('responseDateSection').style.display = 'none';
             document.getElementById('multipleMattersSection').style.display = 'none';
-            
+
             // Clear output
             document.getElementById('fileNoteOutput').style.display = 'none';
             document.getElementById('fileNoteOutput').innerHTML = '';
             document.getElementById('fileNoteZapierStatus').style.display = 'none';
             currentFileNotePrompt = '';
         };
-        
+
         // ===== INITIALIZATION =====
         document.addEventListener('DOMContentLoaded', () => {
             loadSavedData();
             updateUI();
         });
-        
+
         window.onclick = (event) => {
             const modal = document.getElementById('addClientModal');
             if (event.target === modal) closeModal();
         };
+        
+        // ===== MOBILE MENU FUNCTIONS =====
+        const toggleMobileMenu = () => {
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            const overlay = document.querySelector('.mobile-menu-overlay');
+            const menu = document.querySelector('.mobile-menu');
+            
+            toggle.classList.toggle('active');
+            overlay.classList.toggle('active');
+            menu.classList.toggle('active');
+            
+            // Prevent body scroll when menu is open
+            if (menu.classList.contains('active')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        };
+        
+        const closeMobileMenu = () => {
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            const overlay = document.querySelector('.mobile-menu-overlay');
+            const menu = document.querySelector('.mobile-menu');
+            
+            toggle.classList.remove('active');
+            overlay.classList.remove('active');
+            menu.classList.remove('active');
+            document.body.style.overflow = '';
+        };
+        
+        const switchTabMobile = (tabName) => {
+            // Update mobile menu active state
+            document.querySelectorAll('.mobile-menu-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Switch the actual tab
+            switchTab(tabName, null);
+            
+            // Close mobile menu
+            closeMobileMenu();
+        };
+        
+        const toggleClientCard = (cardElement) => {
+            cardElement.classList.toggle('expanded');
+        };
+        
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (event) => {
+            const menu = document.querySelector('.mobile-menu');
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            
+            if (menu.classList.contains('active') && 
+                !menu.contains(event.target) && 
+                !toggle.contains(event.target)) {
+                closeMobileMenu();
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                closeMobileMenu();
+            }
+        });
     </script>
-    
+
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -2795,9 +2861,9 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             background: #f8fafc;
             color: #1e293b;
         }
-        
+
         .container { max-width: 1400px; margin: 0 auto; }
-        
+
         .header {
             background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
             color: white;
@@ -2806,7 +2872,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             margin-bottom: 30px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-        
+
         .tabs {
             display: flex;
             gap: 4px;
@@ -2816,7 +2882,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             padding: 4px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
-        
+
         .tab {
             padding: 12px 24px;
             background: transparent;
@@ -2827,18 +2893,18 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             transition: all 0.2s;
             color: #64748b;
         }
-        
+
         .tab.active {
             background: #3b82f6;
             color: white;
             box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
         }
-        
+
         .tab:hover:not(.active) {
             background: #e2e8f0;
             color: #475569;
         }
-        
+
         .tab-content {
             display: none;
             background: white;
@@ -2846,15 +2912,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             padding: 30px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-        
+
         .tab-content.active { display: block; }
-        
+
         .master-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
-        
+
         .master-table th {
             background: #f1f5f9;
             padding: 12px;
@@ -2863,14 +2929,14 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             color: #475569;
             border-bottom: 2px solid #e2e8f0;
         }
-        
+
         .master-table td {
             padding: 12px;
             border-bottom: 1px solid #e2e8f0;
         }
-        
+
         .master-table tr:hover { background: #f8fafc; }
-        
+
         .status-badge {
             display: inline-block;
             padding: 4px 8px;
@@ -2878,20 +2944,20 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             font-size: 12px;
             font-weight: 500;
         }
-        
+
         .status-active { background: #dcfce7; color: #166534; }
         .status-waiting { background: #fef3c7; color: #92400e; }
         .status-completed { background: #dbeafe; color: #1e40af; }
-        
+
         .form-group { margin-bottom: 20px; }
-        
+
         .form-group label {
             display: block;
             font-weight: 600;
             color: #374151;
             margin-bottom: 8px;
         }
-        
+
         .form-group select,
         .form-group input,
         .form-group textarea {
@@ -2902,7 +2968,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             font-size: 14px;
             transition: border-color 0.2s;
         }
-        
+
         .form-group select:focus,
         .form-group input:focus,
         .form-group textarea:focus {
@@ -2910,19 +2976,19 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
-        
+
         textarea {
             min-height: 100px;
             resize: vertical;
         }
-        
+
         .checkbox-group {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 12px;
             margin-top: 12px;
         }
-        
+
         .checkbox-item {
             display: flex;
             align-items: center;
@@ -2932,15 +2998,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             border-radius: 6px;
             transition: all 0.2s;
         }
-        
+
         .checkbox-item:hover {
             border-color: #3b82f6;
             background: #f8fafc;
         }
-        
+
         .checkbox-item input[type="checkbox"],
         .checkbox-item input[type="radio"] { width: auto; }
-        
+
         .btn {
             padding: 12px 24px;
             border: none;
@@ -2951,20 +3017,20 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             font-size: 14px;
             margin-right: 10px;
         }
-        
+
         .btn-primary { background: #3b82f6; color: white; }
         .btn-primary:hover {
             background: #2563eb;
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
-        
+
         .btn-secondary { background: #6b7280; color: white; }
         .btn-secondary:hover { background: #4b5563; }
-        
+
         .btn-success { background: #10b981; color: white; }
         .btn-success:hover { background: #059669; }
-        
+
         .output-box {
             background: #f8fafc;
             border: 2px solid #e2e8f0;
@@ -2976,7 +3042,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             max-height: 400px;
             overflow-y: auto;
         }
-        
+
         .client-info {
             background: #f0f9ff;
             border: 2px solid #0284c7;
@@ -2984,24 +3050,24 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             padding: 16px;
             margin-bottom: 20px;
         }
-        
+
         .client-info h3 {
             margin: 0 0 12px 0;
             color: #0284c7;
         }
-        
+
         .info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 12px;
         }
-        
+
         .info-item {
             display: flex;
             flex-direction: column;
             gap: 4px;
         }
-        
+
         .info-label {
             font-size: 12px;
             font-weight: 600;
@@ -3009,25 +3075,25 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
-        
+
         .info-value {
             font-weight: 500;
             color: #1f2937;
         }
-        
+
         .section {
             border-top: 2px solid #eee;
             margin-top: 25px;
             padding-top: 20px;
         }
-        
+
         .section-title {
             font-size: 18px;
             font-weight: bold;
             color: #007bff;
             margin-bottom: 15px;
         }
-        
+
         .database-status {
             padding: 10px;
             margin-bottom: 20px;
@@ -3035,22 +3101,22 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             text-align: center;
             font-weight: bold;
         }
-        
+
         .status-connected { background-color: #d4edda; color: #155724; }
         .status-disconnected { background-color: #f8d7da; color: #721c24; }
-        
+
         .letter-history {
             background: #f9fafb;
             border-radius: 8px;
             padding: 16px;
             margin-top: 20px;
         }
-        
+
         .letter-history h4 {
             margin: 0 0 12px 0;
             color: #374151;
         }
-        
+
         .letter-item {
             display: flex;
             justify-content: space-between;
@@ -3058,9 +3124,9 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             padding: 8px 0;
             border-bottom: 1px solid #e5e7eb;
         }
-        
+
         .letter-item:last-child { border-bottom: none; }
-        
+
         .add-client-btn {
             position: fixed;
             bottom: 30px;
@@ -3076,12 +3142,12 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
             transition: all 0.2s;
         }
-        
+
         .add-client-btn:hover {
             background: #2563eb;
             transform: scale(1.1);
         }
-        
+
         .modal {
             display: none;
             position: fixed;
@@ -3092,7 +3158,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             background: rgba(0, 0, 0, 0.5);
             z-index: 1000;
         }
-        
+
         .modal-content {
             position: absolute;
             top: 50%;
@@ -3106,7 +3172,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             max-height: 90vh;
             overflow-y: auto;
         }
-        
+
         .close {
             position: absolute;
             top: 15px;
@@ -3116,9 +3182,9 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             cursor: pointer;
             color: #6b7280;
         }
-        
+
         .close:hover { color: #374151; }
-        
+
         .cdr-checkbox {
             background: #fef3c7;
             border: 2px solid #fbbf24;
@@ -3126,29 +3192,29 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             padding: 15px;
             margin-top: 20px;
         }
-        
+
         .cdr-checkbox label {
             font-weight: 600;
             color: #92400e;
         }
-        
+
         .charges-section {
             background: #f9fafb;
             border-radius: 8px;
             padding: 16px;
             margin-top: 12px;
         }
-        
+
         .charges-category {
             margin-bottom: 20px;
         }
-        
+
         .charges-category h4 {
             color: #374151;
             margin-bottom: 10px;
             font-size: 16px;
         }
-        
+
         .conditional {
             display: none;
             margin-top: 15px;
@@ -3157,7 +3223,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             border-radius: 8px;
             border: 1px solid #e0e7ff;
         }
-        
+
         .multi-select {
             min-height: 120px;
         }
@@ -3169,25 +3235,25 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             justify-content: center;
             flex-wrap: wrap;
         }
-        
+
         .week-header {
             text-align: center;
             margin: 20px 0;
             color: #1e293b;
         }
-        
+
         .week-header h3 {
             font-size: 24px;
             margin: 0;
         }
-        
+
         .week-grid-container {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 15px;
             margin: 30px 0;
         }
-        
+
         .day-card {
             background: white;
             border-radius: 8px;
@@ -3197,57 +3263,57 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             border: 2px solid transparent;
             position: relative;
         }
-        
+
         .day-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        
+
         .day-empty {
             background: #f9fafb;
             border-color: #e5e7eb;
         }
-        
+
         .day-light {
             background: #dcfce7;
             border-color: #86efac;
         }
-        
+
         .day-medium {
             background: #fef3c7;
             border-color: #fcd34d;
         }
-        
+
         .day-heavy {
             background: #fee2e2;
             border-color: #fca5a5;
         }
-        
+
         .day-header {
             font-weight: 600;
             font-size: 16px;
             margin-bottom: 10px;
             color: #1e293b;
         }
-        
+
         .day-stats {
             font-size: 14px;
         }
-        
+
         .matter-count {
             color: #475569;
             margin-bottom: 5px;
         }
-        
+
         .hour-count {
             color: #64748b;
             font-size: 13px;
         }
-        
+
         .daily-details-container {
             margin: 30px 0;
         }
-        
+
         .day-details {
             background: white;
             border-radius: 8px;
@@ -3255,19 +3321,19 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             margin-bottom: 20px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
-        
+
         .day-details h4 {
             margin: 0 0 15px 0;
             color: #1e293b;
             font-size: 18px;
         }
-        
+
         .matters-list {
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
-        
+
         .matter-item {
             display: flex;
             gap: 15px;
@@ -3276,28 +3342,28 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             border-radius: 6px;
             border-left: 3px solid #3b82f6;
         }
-        
+
         .matter-time {
             font-weight: 600;
             color: #1e293b;
             min-width: 80px;
         }
-        
+
         .matter-info {
             flex: 1;
         }
-        
+
         .matter-client {
             font-weight: 500;
             color: #1e293b;
             margin-bottom: 4px;
         }
-        
+
         .matter-details {
             font-size: 14px;
             color: #64748b;
         }
-        
+
         .week-summary {
             background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
             color: white;
@@ -3305,38 +3371,38 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             border-radius: 8px;
             margin-top: 30px;
         }
-        
+
         .week-summary h4 {
             margin: 0 0 15px 0;
             font-size: 18px;
         }
-        
+
         .summary-stats {
             display: flex;
             gap: 30px;
             justify-content: center;
         }
-        
+
         .stat-item {
             display: flex;
             gap: 10px;
             align-items: center;
         }
-        
+
         .stat-label {
             opacity: 0.9;
         }
-        
+
         .stat-value {
             font-size: 24px;
             font-weight: 600;
         }
-        
+
         /* Mobile Card View for Client Table */
         .client-card {
             display: none;
         }
-        
+
         /* Responsive Design - iPhone 16 Pro Max (430px) */
         @media (max-width: 430px) {
             body {
@@ -3344,32 +3410,32 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 font-size: 16px;
                 -webkit-text-size-adjust: 100%;
             }
-            
+
             .container {
                 padding: 0;
             }
-            
+
             .header {
                 padding: 20px 15px;
                 margin-bottom: 15px;
                 border-radius: 8px;
             }
-            
+
             .header h1 {
                 font-size: 24px;
                 margin-bottom: 5px;
             }
-            
+
             .header p {
                 font-size: 14px;
             }
-            
+
             /* Tabs - Stack vertically on mobile */
             .tabs {
                 flex-direction: column;
                 padding: 8px;
             }
-            
+
             .tab {
                 width: 100%;
                 padding: 15px;
@@ -3377,12 +3443,12 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 text-align: left;
                 min-height: 44px;
             }
-            
+
             /* Hide table on mobile, show cards */
             .master-table {
                 display: none;
             }
-            
+
             .client-card {
                 display: block;
                 background: white;
@@ -3392,49 +3458,49 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 border-left: 4px solid #3b82f6;
             }
-            
+
             .client-card-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: start;
                 margin-bottom: 10px;
             }
-            
+
             .client-card-name {
                 font-weight: 600;
                 font-size: 18px;
                 color: #1e293b;
                 flex: 1;
             }
-            
+
             .client-card-status {
                 padding: 4px 8px;
                 border-radius: 4px;
                 font-size: 12px;
                 font-weight: 500;
             }
-            
+
             .client-card-details {
                 margin-bottom: 10px;
             }
-            
+
             .client-card-row {
                 display: flex;
                 justify-content: space-between;
                 padding: 5px 0;
                 font-size: 14px;
             }
-            
+
             .client-card-label {
                 color: #64748b;
                 font-weight: 500;
             }
-            
+
             .client-card-value {
                 color: #1e293b;
                 text-align: right;
             }
-            
+
             .client-card-charges {
                 padding: 8px;
                 background: #f8fafc;
@@ -3446,20 +3512,20 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
-            
+
             .client-card-actions {
                 display: flex;
                 gap: 10px;
                 margin-top: 15px;
             }
-            
+
             .client-card-actions .btn {
                 flex: 1;
                 padding: 12px;
                 font-size: 16px;
                 min-height: 44px;
             }
-            
+
             /* Form elements - full width on mobile */
             .form-group input,
             .form-group select,
@@ -3469,25 +3535,25 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 padding: 15px;
                 min-height: 44px;
             }
-            
+
             .form-group label {
                 font-size: 16px;
                 margin-bottom: 8px;
             }
-            
+
             /* Checkboxes - larger touch targets */
             .checkbox-item {
                 padding: 15px;
                 margin-bottom: 8px;
             }
-            
+
             .checkbox-item input[type="checkbox"],
             .checkbox-item input[type="radio"] {
                 width: 20px;
                 height: 20px;
                 margin-right: 12px;
             }
-            
+
             /* Buttons - full width and larger */
             .btn {
                 width: 100%;
@@ -3497,68 +3563,68 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 margin-right: 0;
                 min-height: 44px;
             }
-            
+
             /* Court Calendar Mobile */
             .calendar-navigation {
                 flex-direction: column;
             }
-            
+
             .calendar-navigation .btn {
                 width: 100%;
                 margin: 5px 0;
             }
-            
+
             .week-grid-container {
                 grid-template-columns: 1fr;
                 gap: 10px;
             }
-            
+
             .day-card {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 padding: 15px;
             }
-            
+
             .day-header {
                 font-size: 16px;
             }
-            
+
             .day-stats {
                 text-align: right;
             }
-            
+
             .day-details {
                 display: none;
                 margin-top: 10px;
                 padding: 15px;
             }
-            
+
             .day-details.expanded {
                 display: block;
             }
-            
+
             .matter-item {
                 flex-direction: column;
                 gap: 5px;
             }
-            
+
             .matter-time {
                 font-size: 14px;
                 min-width: auto;
             }
-            
+
             .summary-stats {
                 flex-direction: column;
                 gap: 15px;
                 align-items: center;
             }
-            
+
             .stat-item {
                 justify-content: space-between;
                 width: 100%;
             }
-            
+
             /* Modal - full screen on mobile */
             .modal-content {
                 width: 100%;
@@ -3572,7 +3638,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 left: 0;
                 transform: none;
             }
-            
+
             .close {
                 position: fixed;
                 top: 20px;
@@ -3588,86 +3654,86 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 border-radius: 50%;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             }
-            
+
             /* Tab content padding */
             .tab-content {
                 padding: 15px;
             }
-            
+
             /* Analytics charts - stack vertically */
             #analytics .analytics-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             /* Output boxes */
             .output-box {
                 font-size: 14px;
                 padding: 15px;
             }
-            
+
             /* Info grid */
             .info-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             /* Prevent horizontal scroll */
             html, body {
                 overflow-x: hidden;
                 max-width: 100%;
             }
-            
+
             /* iOS specific */
             input, select, textarea {
                 -webkit-appearance: none;
                 -moz-appearance: none;
                 appearance: none;
             }
-            
+
             /* Safe area for iPhone notch */
             .header {
                 padding-top: calc(20px + env(safe-area-inset-top));
             }
-            
+
             .container {
                 padding-left: env(safe-area-inset-left);
                 padding-right: env(safe-area-inset-right);
             }
-            
+
             /* Touch-friendly scrolling */
             .tab-content, .modal-content {
                 -webkit-overflow-scrolling: touch;
             }
-            
+
             /* Larger touch targets for links */
             a {
                 min-height: 44px;
                 display: inline-flex;
                 align-items: center;
             }
-            
+
             /* Section spacing */
             .section {
                 margin-bottom: 20px;
                 padding: 15px;
             }
-            
+
             .section-title {
                 font-size: 16px;
                 margin-bottom: 10px;
             }
-            
+
             /* CDR checkbox */
             .cdr-checkbox {
                 margin: 15px 0;
             }
-            
+
             /* Database status */
             .database-status {
                 font-size: 14px;
                 padding: 10px;
                 margin-bottom: 15px;
             }
-            
+
             /* Add client button - fixed position */
             .add-client-btn {
                 bottom: 20px;
@@ -3677,20 +3743,428 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 font-size: 24px;
             }
         }
-        
+
         /* Additional breakpoint for tablets */
         @media (min-width: 431px) and (max-width: 768px) {
             .week-grid-container {
                 grid-template-columns: repeat(3, 1fr);
             }
-            
+
             .tabs {
                 flex-wrap: wrap;
             }
-            
+
             .tab {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 150px;
+            }
+        }
+
+        /* ===== MOBILE RESPONSIVE STYLES ===== */
+        
+        /* Burger Menu Navigation */
+        .mobile-menu-toggle {
+            display: none;
+            width: 30px;
+            height: 30px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 4px 0;
+            position: relative;
+            z-index: 1001;
+        }
+        
+        .mobile-menu-toggle span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background: white;
+            border-radius: 1px;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+        
+        .mobile-menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .mobile-menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -6px);
+        }
+        
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .mobile-menu-overlay.active {
+            opacity: 1;
+        }
+        
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            right: -250px;
+            width: min(250px, 70vw);
+            height: 100%;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            padding: 20px 0;
+        }
+        
+        .mobile-menu.active {
+            right: 0;
+        }
+        
+        .mobile-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .mobile-menu-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .mobile-menu-tabs {
+            padding: 20px 0;
+        }
+        
+        .mobile-menu-tab {
+            display: block;
+            width: 100%;
+            padding: 15px 20px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 16px;
+            font-weight: 500;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .mobile-menu-tab:hover {
+            background: #f9fafb;
+            color: #3b82f6;
+        }
+        
+        .mobile-menu-tab.active {
+            background: #eff6ff;
+            color: #3b82f6;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        /* Mobile Card Layout */
+        .client-cards {
+            display: none;
+        }
+        
+        .client-card {
+            background: white;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .client-card-header {
+            padding: 15px;
+            cursor: pointer;
+            min-height: 44px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        
+        .client-card-header:hover {
+            background: #f8fafc;
+        }
+        
+        .client-card-main {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+        }
+        
+        .client-card-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #1e293b;
+        }
+        
+        .client-card-matter {
+            font-size: 14px;
+            color: #64748b;
+        }
+        
+        .client-card-status-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        
+        .client-card-expand {
+            color: #64748b;
+            font-size: 18px;
+            transition: transform 0.3s ease;
+            margin-left: 10px;
+        }
+        
+        .client-card.expanded .client-card-expand {
+            transform: rotate(180deg);
+        }
+        
+        .client-card-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 15px;
+        }
+        
+        .client-card.expanded .client-card-details {
+            max-height: 500px;
+            padding: 0 15px 15px;
+        }
+        
+        .client-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .client-card-row:last-child {
+            border-bottom: none;
+        }
+        
+        .client-card-label {
+            font-weight: 600;
+            color: #475569;
+            min-width: 80px;
+        }
+        
+        .client-card-value {
+            color: #1e293b;
+            text-align: right;
+            flex: 1;
+            margin-left: 10px;
+            word-wrap: break-word;
+        }
+        
+        .client-card-charges {
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .client-card-charges strong {
+            color: #475569;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .client-card-letters {
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .client-card-letters strong {
+            color: #475569;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .client-card-letter-status {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .client-card-actions {
+            padding: 15px 0 5px;
+        }
+        
+        .client-card-btn {
+            width: 100%;
+            padding: 12px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 44px;
+        }
+        
+        .client-card-btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        
+        /* Desktop/Mobile Breakpoints */
+        @media (max-width: 768px) {
+            /* Hide desktop navigation */
+            .tabs {
+                display: none;
+            }
+            
+            /* Show mobile menu toggle */
+            .mobile-menu-toggle,
+            .mobile-menu-overlay,
+            .mobile-menu {
+                display: flex;
+            }
+            
+            /* Header adjustments */
+            .header {
+                position: relative;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .mobile-menu-toggle {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+            }
+            
+            /* Hide desktop table */
+            .master-table {
+                display: none;
+            }
+            
+            /* Show mobile cards */
+            .client-cards {
+                display: block;
+            }
+            
+            /* Container adjustments */
+            .container {
+                padding: 0 10px;
+            }
+            
+            body {
+                padding: 10px;
+            }
+            
+            .tab-content {
+                padding: 20px 15px;
+            }
+            
+            /* Form adjustments */
+            .form-group {
+                margin-bottom: 15px;
+            }
+            
+            .btn {
+                padding: 12px 16px;
+                font-size: 14px;
+                margin-bottom: 10px;
+                margin-right: 5px;
+            }
+            
+            /* Responsive button layout */
+            .form-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .form-actions .btn {
+                width: 100%;
+                margin-right: 0;
+            }
+            
+            /* Checkbox groups responsive */
+            .checkbox-group {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Mobile analytics cards */
+            .analytics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+                gap: 15px;
+            }
+        }
+        
+        /* Tablet specific adjustments */
+        @media (min-width: 431px) and (max-width: 768px) {
+            .client-cards .client-card {
+                margin: 8px 0;
+            }
+            
+            .client-card-header {
+                padding: 18px;
+            }
+            
+            .analytics-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+        
+        /* Small mobile devices */
+        @media (max-width: 430px) {
+            .mobile-menu {
+                width: 80vw;
+            }
+            
+            .header {
+                padding: 15px;
+            }
+            
+            .tab-content {
+                padding: 15px 10px;
+            }
+            
+            .client-card-header {
+                padding: 12px;
+            }
+            
+            .client-card-name {
+                font-size: 15px;
+            }
+            
+            .client-card-matter {
+                font-size: 13px;
             }
         }
     </style>
@@ -3700,10 +4174,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         <div class="header">
             <h1>Legal Letter Generation System</h1>
             <p>Streamlined client matter management and automated Claude prompt generation</p>
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
-        
+
         <div class="database-status" id="databaseStatus">Database: Not Connected</div>
-        
+
         <div class="tabs">
             <button class="tab active" onclick="switchTab('master', event)">Master Client List</button>
             <button class="tab" onclick="switchTab('generator', event)">Letter Generator</button>
@@ -3712,12 +4191,31 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             <button class="tab" onclick="switchTab('analytics', event)">Analytics</button>
             <button class="tab" onclick="switchTab('filenote', event)">File Note</button>
         </div>
+
+        <!-- Mobile Menu Overlay -->
+        <div class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
         
+        <!-- Mobile Menu -->
+        <div class="mobile-menu">
+            <div class="mobile-menu-header">
+                <h3>Menu</h3>
+                <button class="mobile-menu-close" onclick="closeMobileMenu()">×</button>
+            </div>
+            <div class="mobile-menu-tabs">
+                <button class="mobile-menu-tab active" onclick="switchTabMobile('master')">Master Client List</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('generator')">Letter Generator</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('cdr')">CDR</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('calendar')">Court Calendar</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('analytics')">Analytics</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('filenote')">File Note</button>
+            </div>
+        </div>
+
         <!-- Master Client List Tab -->
         <div id="master" class="tab-content active">
             <h2>Active Client Matters</h2>
             <p>Manage your active matters and track letter status</p>
-            
+
             <!-- Desktop Table View -->
             <table class="master-table">
                 <thead>
@@ -3736,42 +4234,42 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 </thead>
                 <tbody id="clientTableBody"></tbody>
             </table>
-            
+
             <!-- Mobile Cards View -->
-            <div id="clientCardsContainer" class="client-cards-container">
+            <div id="clientCardsContainer" class="client-cards">
                 <!-- Client cards will be inserted here for mobile view -->
             </div>
-            
-            <div style="margin-top: 20px;">
+
+            <div class="form-actions" style="margin-top: 20px;">
                 <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" onchange="loadExcelFile()" style="display: none;">
                 <button class="btn btn-primary" onclick="document.getElementById('excelFile').click()">Upload Excel Database</button>
                 <button class="btn btn-secondary" onclick="exportToExcel()">Export to Excel</button>
                 <button class="btn btn-success" onclick="uploadToSupabase()" style="background: #10b981;">Upload to Supabase</button>
             </div>
         </div>
-        
+
         <!-- Letter Generator Tab -->
         <div id="generator" class="tab-content">
             <h2>Generate Letter Prompt</h2>
-            
+
             <div class="form-group">
                 <label for="clientSelect">Select Client:</label>
                 <select id="clientSelect" onchange="loadClientInfo()">
                     <option value="">-- Select a Client --</option>
                 </select>
             </div>
-            
+
             <div id="clientInfoSection" style="display: none;">
                 <div class="client-info">
                     <h3>Client Information</h3>
                     <div class="info-grid" id="clientInfoGrid"></div>
                 </div>
-                
+
                 <div class="letter-history">
                     <h4>Letter History</h4>
                     <div id="letterHistoryList"></div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="clientPrefix">Client Prefix:</label>
                     <select id="clientPrefix">
@@ -3783,7 +4281,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         <option value="Dr">Dr</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="letterType">Letter Type:</label>
                     <select id="letterType" onchange="updateLetterFields()">
@@ -3794,15 +4292,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         <option value="FeeReestimate">Fee Re-estimate Letter</option>
                     </select>
                 </div>
-                
+
                 <div id="dynamicFields"></div>
-                
+
                 <div class="cdr-checkbox" id="cdrForLetterSection" style="display: none;">
                     <div class="checkbox-item">
                         <input type="checkbox" id="generateCDRWithLetter" onchange="toggleCDRFields()">
                         <label for="generateCDRWithLetter">Generate CDR for next appearance?</label>
                     </div>
-                    
+
                     <div id="cdrFieldsInLetter" style="display: none; margin-top: 15px;">
                         <h4>CDR Details (will auto-populate from letter data)</h4>
                         <div class="form-group">
@@ -3825,7 +4323,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                                 <option value="Return of Subpoena">Return of Subpoena</option>
                             </select>
                         </div>
-                        
+
                         <div class="form-group">
                             <label>Allocate To:</label>
                             <div class="checkbox-group">
@@ -3851,39 +4349,39 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="checkbox-item">
                             <input type="checkbox" id="letterCDRClientExcused">
                             <label for="letterCDRClientExcused">Client Excused</label>
                         </div>
                     </div>
                 </div>
-                
-                <div style="margin-top: 30px;">
+
+                <div class="form-actions" style="margin-top: 30px;">
                     <button class="btn btn-primary" onclick="generatePrompt()">Generate Claude Prompt</button>
                     <button class="btn btn-success" onclick="copyPrompt()">Copy to Clipboard</button>
                     <button class="btn btn-secondary" onclick="clearForm()">Clear Form</button>
                     <button class="btn btn-success" onclick="sendToZapier()">Send to Zapier</button>
                     <button class="btn btn-primary" onclick="updateExcelRecord()">Update Excel Record</button>
                 </div>
-                
+
                 <div id="promptOutput" class="output-box" style="display: none;"></div>
                 <div id="zapierStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
             </div>
         </div>
-        
+
         <!-- CDR Tab -->
         <div id="cdr" class="tab-content">
             <h2>Court Diary Request (CDR)</h2>
             <p>Generate CDR for court appearances</p>
-            
+
             <div class="form-group">
                 <label for="cdrClientSelect">Select Client (Optional):</label>
                 <select id="cdrClientSelect" onchange="loadCDRClientInfo()">
                     <option value="">-- Manual Entry --</option>
                 </select>
             </div>
-            
+
             <div class="section">
                 <div class="section-title">Court Outcome</div>
                 <div class="form-group">
@@ -3903,7 +4401,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     <input type="time" id="cdrFinishTime" value="10:00">
                 </div>
             </div>
-            
+
             <div class="section">
                 <div class="section-title">Court Diary Request</div>
                 <div class="form-group">
@@ -3993,22 +4491,22 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     <input type="text" id="cdrFeeReminder" placeholder="Enter fee reminder details">
                 </div>
             </div>
-            
-            <div style="margin-top: 30px;">
+
+            <div class="form-actions" style="margin-top: 30px;">
                 <button class="btn btn-primary" onclick="generateCDR()">Generate CDR</button>
                 <button class="btn btn-success" onclick="sendCDRToZapier()">Send CDR to Zapier</button>
                 <button class="btn btn-secondary" onclick="clearCDRForm()">Clear Form</button>
             </div>
-            
+
             <div id="cdrOutput" class="output-box" style="display: none;"></div>
             <div id="cdrZapierStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
         </div>
-        
+
         <!-- Analytics Tab -->
         <div id="analytics" class="tab-content">
             <h2>Matter Analytics</h2>
             <p>Overview of your client matters and letter status</p>
-            
+
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
                 <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; text-align: center;">
                     <h3 style="margin: 0; color: #0284c7;">Total Matters</h3>
@@ -4027,52 +4525,52 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     <p style="font-size: 2em; font-weight: bold; margin: 10px 0; color: #be185d;" id="upcomingCourt">0</p>
                 </div>
             </div>
-            
+
             <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                 <h3>Matters by Court</h3>
                 <div id="courtBreakdown"></div>
             </div>
-            
+
             <div style="background: white; padding: 20px; border-radius: 8px;">
                 <h3>Letter Status Overview</h3>
                 <div id="letterStatusChart"></div>
             </div>
         </div>
     </div>
-    
+
     <!-- Court Calendar Tab -->
     <div id="calendar" class="tab-content">
         <h2>Court Calendar</h2>
         <p>Your weekly court schedule at a glance</p>
-        
+
         <div class="calendar-navigation">
             <button class="btn btn-secondary" onclick="navigateWeek('prev')">← Previous Week</button>
             <button class="btn btn-primary" onclick="navigateWeek('current')">Current Week</button>
             <button class="btn btn-secondary" onclick="navigateWeek('next')">Next Week →</button>
         </div>
-        
+
         <div id="weekHeader" class="week-header">
             <!-- Week header will be inserted here -->
         </div>
-        
+
         <div id="weekGrid" class="week-grid">
             <!-- Weekly grid will be inserted here -->
         </div>
-        
+
         <div id="dailyDetails" class="daily-details">
             <!-- Daily matter details will be inserted here -->
         </div>
-        
+
         <div id="weekTotals" class="week-totals">
             <!-- Week totals will be inserted here -->
         </div>
     </div>
-    
+
     <!-- File Note Tab -->
     <div id="filenote" class="tab-content">
         <h2>Generate File Note</h2>
         <p>Create formal documentation of client interactions and court appearances</p>
-        
+
         <!-- Note Type Selection -->
         <div class="section">
             <div class="section-title">Note Type</div>
@@ -4091,7 +4589,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 </div>
             </div>
         </div>
-        
+
         <!-- Client Information Section -->
         <div class="section">
             <div class="section-title">Client Information</div>
@@ -4105,7 +4603,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     <label for="fileNoteClientManual">Manual Entry</label>
                 </div>
             </div>
-            
+
             <div id="fileNoteDatabaseSelection" style="margin-top: 15px;">
                 <div class="form-group">
                     <label for="fileNoteClientSelect">Select Client:</label>
@@ -4114,7 +4612,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     </select>
                 </div>
             </div>
-            
+
             <div id="fileNoteManualEntry" style="display: none; margin-top: 15px;">
                 <div class="form-group">
                     <label for="fileNoteManualName">Client Name:</label>
@@ -4133,7 +4631,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     <input type="text" id="fileNoteManualCharges">
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label for="fileNoteDate">Date:</label>
                 <input type="date" id="fileNoteDate">
@@ -4147,7 +4645,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 <input type="time" id="fileNoteEndTime">
             </div>
         </div>
-        
+
         <!-- General Meeting Section -->
         <div id="fileNoteGeneralSection" class="section">
             <div class="section-title">Meeting Details</div>
@@ -4204,7 +4702,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 </div>
             </div>
         </div>
-        
+
         <!-- Court Appearance Section -->
         <div id="fileNoteCourtSection" class="section" style="display: none;">
             <div class="section-title">Court Appearance Details</div>
@@ -4301,7 +4799,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 </div>
             </div>
         </div>
-        
+
         <!-- Email/Correspondence Section -->
         <div id="fileNoteEmailSection" class="section" style="display: none;">
             <div class="section-title">Email/Correspondence Details</div>
@@ -4360,7 +4858,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 <input type="text" id="actionRequired">
             </div>
         </div>
-        
+
         <!-- Additional Options -->
         <div class="section">
             <div class="checkbox-item">
@@ -4368,25 +4866,25 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 <label for="urgentFollowUp">Urgent Follow-up Required</label>
             </div>
         </div>
-        
+
         <!-- Action Buttons -->
-        <div style="margin-top: 30px;">
+        <div class="form-actions" style="margin-top: 30px;">
             <button class="btn btn-primary" onclick="generateFileNotePrompt()">Generate File Note Prompt</button>
             <button class="btn btn-success" onclick="sendFileNoteToZapier()">Send to Zapier</button>
             <button class="btn btn-success" onclick="copyFileNotePrompt()">Copy to Clipboard</button>
             <button class="btn btn-secondary" onclick="clearFileNoteForm()">Clear Form</button>
         </div>
-        
+
         <div id="fileNoteOutput" class="output-box" style="display: none; margin-top: 20px;"></div>
         <div id="fileNoteZapierStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
     </div>
-    
+
     <!-- Add Client Modal -->
     <div id="addClientModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
             <h2>Add New Client</h2>
-            
+
             <form id="addClientForm" onsubmit="addClient(event)">
                 <div class="form-group">
                     <label for="newClientName">Client Name:</label>
@@ -4456,13 +4954,13 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     <label for="newNextCourt">Next Court Date:</label>
                     <input type="date" id="newNextCourt">
                 </div>
-                
+
                 <button type="submit" class="btn btn-primary">Add Client</button>
                 <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
             </form>
         </div>
     </div>
-    
+
     <button class="add-client-btn" onclick="openModal()" title="Add New Client">+</button>
 </body>
 </html>
