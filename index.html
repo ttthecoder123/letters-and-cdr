@@ -79,14 +79,7 @@
             const tbody = document.getElementById('clientTableBody');
             const cardsContainer = document.getElementById('clientCardsContainer');
 
-            if (!tbody && !cardsContainer) {
-                console.error('Neither table body nor cards container found');
-                return;
-            }
-            
-            console.log('Loading client table - clients count:', clients.length);
-            console.log('Table body exists:', !!tbody);
-            console.log('Cards container exists:', !!cardsContainer);
+            if (!tbody && !cardsContainer) return;
 
             // Desktop table view
             if (tbody) {
@@ -113,10 +106,12 @@
 
             // Mobile cards view
             if (cardsContainer) {
-                cardsContainer.innerHTML = clients.length === 0 ?
-                    `<div style="text-align: center; padding: 40px; color: #6b7280;">
+                if (clients.length === 0) {
+                    cardsContainer.innerHTML = `<div style="text-align: center; padding: 40px; color: #6b7280;">
                         No clients loaded. Please upload an Excel database or add clients manually.
-                    </div>` :
+                    </div>`;
+                } else {
+                    cardsContainer.innerHTML =
                     clients.map(client => `
                         <div class="client-card" onclick="toggleClientCard(this)">
                             <div class="client-card-header">
@@ -157,6 +152,7 @@
                             </div>
                         </div>
                     `).join('');
+                }
             }
         };
 
@@ -3905,6 +3901,13 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             display: none;
         }
         
+        /* Show cards when they have content on mobile */
+        @media (max-width: 768px) {
+            .client-cards:not(:empty) {
+                display: block !important;
+            }
+        }
+        
         .client-card {
             background: white;
             margin: 10px 0;
@@ -4064,19 +4067,19 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             
             /* Show mobile menu toggle */
             .mobile-menu-toggle {
-                display: flex !important;
-                position: absolute;
-                top: 20px;
-                right: 20px;
+                display: flex;
             }
             
             /* Header adjustments */
             .header {
                 position: relative;
                 padding: 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
+            }
+            
+            .mobile-menu-toggle {
+                position: absolute;
+                top: 20px;
+                right: 20px;
             }
             
             /* Hide desktop table */
@@ -4087,6 +4090,11 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             /* Show mobile cards */
             .client-cards {
                 display: block !important;
+                min-height: 100px;
+                background: #f9fafb;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 10px;
             }
             
             /* Container adjustments */
