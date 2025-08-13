@@ -2817,10 +2817,12 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             document.body.style.overflow = '';
         };
         
-        const switchTabMobile = (tabName) => {
+        const switchTabMobile = (tabName, event) => {
             // Update mobile menu active state
             document.querySelectorAll('.mobile-menu-tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
             
             // Switch the actual tab
             switchTab(tabName, null);
@@ -3775,6 +3777,8 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             padding: 4px 0;
             position: relative;
             z-index: 1001;
+            touch-action: manipulation;
+            -webkit-appearance: none;
         }
         
         .mobile-menu-toggle span {
@@ -3836,9 +3840,9 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         
         .mobile-menu-header {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
-            padding: 0 20px 20px;
+            padding: 15px 20px 15px;
             border-bottom: 1px solid #e5e7eb;
         }
         
@@ -3853,6 +3857,8 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             display: flex;
             align-items: center;
             justify-content: center;
+            touch-action: manipulation;
+            -webkit-appearance: none;
         }
         
         .mobile-menu-tabs {
@@ -3872,6 +3878,8 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             cursor: pointer;
             transition: all 0.2s ease;
             border-bottom: 1px solid #f3f4f6;
+            touch-action: manipulation;
+            -webkit-appearance: none;
         }
         
         .mobile-menu-tab:hover {
@@ -4031,6 +4039,8 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             cursor: pointer;
             transition: all 0.2s ease;
             min-height: 44px;
+            touch-action: manipulation;
+            -webkit-appearance: none;
         }
         
         .client-card-btn:hover {
@@ -4046,9 +4056,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             }
             
             /* Show mobile menu toggle */
-            .mobile-menu-toggle,
-            .mobile-menu-overlay,
-            .mobile-menu {
+            .mobile-menu-toggle {
                 display: flex;
             }
             
@@ -4100,6 +4108,8 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 font-size: 14px;
                 margin-bottom: 10px;
                 margin-right: 5px;
+                touch-action: manipulation;
+                -webkit-appearance: none;
             }
             
             /* Responsive button layout */
@@ -4198,16 +4208,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         <!-- Mobile Menu -->
         <div class="mobile-menu">
             <div class="mobile-menu-header">
-                <h3>Menu</h3>
                 <button class="mobile-menu-close" onclick="closeMobileMenu()">×</button>
             </div>
             <div class="mobile-menu-tabs">
-                <button class="mobile-menu-tab active" onclick="switchTabMobile('master')">Master Client List</button>
-                <button class="mobile-menu-tab" onclick="switchTabMobile('generator')">Letter Generator</button>
-                <button class="mobile-menu-tab" onclick="switchTabMobile('cdr')">CDR</button>
-                <button class="mobile-menu-tab" onclick="switchTabMobile('calendar')">Court Calendar</button>
-                <button class="mobile-menu-tab" onclick="switchTabMobile('analytics')">Analytics</button>
-                <button class="mobile-menu-tab" onclick="switchTabMobile('filenote')">File Note</button>
+                <button class="mobile-menu-tab active" onclick="switchTabMobile('master', event)">Master Client List</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('generator', event)">Letter Generator</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('cdr', event)">CDR</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('calendar', event)">Court Calendar</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('analytics', event)">Analytics</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('filenote', event)">File Note</button>
             </div>
         </div>
 
