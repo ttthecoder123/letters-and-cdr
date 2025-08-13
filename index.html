@@ -3900,17 +3900,17 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             border-left: 4px solid #3b82f6;
         }
         
-        /* Mobile Card Layout */
-        #clientCardsContainer {
-            display: none;
-        }
+        /* Mobile Card Layout - Controlled by media queries */
         
-        /* Show container when it has content */
-        #clientCardsContainer:not(:empty) {
-            display: block;
+        /* Desktop: Hide cards container, show table */
+        @media (min-width: 769px) {
+            #clientCardsContainer {
+                display: none !important;
+            }
         }
         
         .client-card {
+            display: block;
             background: white;
             margin: 10px 0;
             border-radius: 8px;
@@ -4094,7 +4094,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             
             /* Hide desktop table */
             .master-table {
-                display: none;
+                display: none !important;
             }
             
             /* Show mobile cards */
