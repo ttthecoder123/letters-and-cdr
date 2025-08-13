@@ -2797,15 +2797,9 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             const overlay = document.querySelector('.mobile-menu-overlay');
             const menu = document.querySelector('.mobile-menu');
             
-            console.log('Toggle found:', !!toggle);
-            console.log('Overlay found:', !!overlay);
-            console.log('Menu found:', !!menu);
-            
             if (toggle) toggle.classList.toggle('active');
             if (overlay) overlay.classList.toggle('active');
             if (menu) menu.classList.toggle('active');
-            
-            console.log('Menu has active class:', menu?.classList.contains('active'));
             
             // Prevent body scroll when menu is open
             if (menu && menu.classList.contains('active')) {
@@ -3822,10 +3816,12 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             z-index: 999;
             opacity: 0;
             transition: opacity 0.3s ease;
+            pointer-events: none;
         }
         
         .mobile-menu-overlay.active {
             opacity: 1 !important;
+            pointer-events: auto;
         }
         
         .mobile-menu {
@@ -3841,10 +3837,12 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             transition: right 0.3s ease;
             overflow-y: auto;
             padding: 20px 0;
+            pointer-events: none;
         }
         
         .mobile-menu.active {
             right: 0 !important;
+            pointer-events: auto;
         }
         
         .mobile-menu-header {
@@ -4129,13 +4127,35 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 margin-bottom: 15px;
             }
             
+            /* Mobile form input fixes */
+            .form-group select,
+            .form-group input,
+            .form-group textarea {
+                -webkit-appearance: none;
+                touch-action: manipulation;
+                border-radius: 8px;
+                font-size: 16px;
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+            }
+            
+            /* iOS checkbox and radio fixes */
+            input[type="checkbox"],
+            input[type="radio"] {
+                -webkit-appearance: none;
+                touch-action: manipulation;
+                transform: translateZ(0);
+            }
+            
             .btn {
                 padding: 12px 16px;
-                font-size: 14px;
+                font-size: 16px;
                 margin-bottom: 10px;
                 margin-right: 5px;
                 touch-action: manipulation;
                 -webkit-appearance: none;
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
             }
             
             /* Responsive button layout */
@@ -4155,10 +4175,75 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 grid-template-columns: 1fr;
             }
             
+            /* Enhanced mobile interaction fixes */
+            .checkbox-item {
+                touch-action: manipulation;
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                user-select: none;
+            }
+            
+            .checkbox-item input[type="checkbox"],
+            .checkbox-item input[type="radio"] {
+                min-width: 20px;
+                min-height: 20px;
+                cursor: pointer;
+            }
+            
+            /* Status badges and interactive elements */
+            .status-badge,
+            .client-card-btn,
+            .mobile-menu-tab,
+            .mobile-menu-close,
+            .mobile-menu-toggle {
+                touch-action: manipulation;
+                -webkit-appearance: none;
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+            }
+            
+            /* File input and special buttons */
+            input[type="file"],
+            button[onclick] {
+                touch-action: manipulation;
+                -webkit-appearance: none;
+            }
+            
             /* Mobile analytics cards */
             .analytics-grid {
                 grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
                 gap: 15px;
+            }
+            
+            /* Global mobile interaction fixes */
+            * {
+                -webkit-tap-highlight-color: rgba(0,0,0,0);
+                -webkit-touch-callout: none;
+            }
+            
+            /* Ensure all clickable elements are responsive */
+            button, input, select, textarea, [onclick], [onchange] {
+                touch-action: manipulation !important;
+                -webkit-user-select: none;
+                user-select: none;
+            }
+            
+            /* Specifically target form elements */
+            input, select, textarea {
+                -webkit-user-select: text;
+                user-select: text;
+            }
+            
+            /* Prevent zoom on input focus */
+            input[type="text"],
+            input[type="email"], 
+            input[type="number"],
+            input[type="tel"],
+            input[type="date"],
+            input[type="time"],
+            select,
+            textarea {
+                font-size: 16px !important;
             }
         }
         
