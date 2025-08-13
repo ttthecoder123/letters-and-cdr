@@ -3901,15 +3901,13 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         }
         
         /* Mobile Card Layout */
-        .client-cards {
+        #clientCardsContainer {
             display: none;
         }
         
-        /* Show cards when they have content on mobile */
-        @media (max-width: 768px) {
-            .client-cards:not(:empty) {
-                display: block !important;
-            }
+        /* Show container when it has content */
+        #clientCardsContainer:not(:empty) {
+            display: block;
         }
         
         .client-card {
@@ -4100,13 +4098,8 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             }
             
             /* Show mobile cards */
-            .client-cards {
+            #clientCardsContainer {
                 display: block !important;
-                min-height: 100px;
-                background: #f9fafb;
-                border: 1px solid #e5e7eb;
-                border-radius: 8px;
-                padding: 10px;
             }
             
             /* Container adjustments */
@@ -4249,7 +4242,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         
         /* Tablet specific adjustments */
         @media (min-width: 431px) and (max-width: 768px) {
-            .client-cards .client-card {
+            #clientCardsContainer .client-card {
                 margin: 8px 0;
             }
             
