@@ -71,6 +71,7 @@
             loadClientTable();
             loadClientSelect();
             loadCDRClientSelect();
+            loadFileNoteClientSelect();
             updateAnalytics();
         };
         
@@ -161,6 +162,13 @@
             const select = document.getElementById('cdrClientSelect');
             if (!select) return;
             select.innerHTML = '<option value="">-- Manual Entry --</option>' +
+                clients.map(c => `<option value="${c.id}">${c.name} (${c.matterNumber})</option>`).join('');
+        };
+        
+        const loadFileNoteClientSelect = () => {
+            const select = document.getElementById('fileNoteClientSelect');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Select a Client --</option>' +
                 clients.map(c => `<option value="${c.id}">${c.name} (${c.matterNumber})</option>`).join('');
         };
         
@@ -2257,6 +2265,516 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             console.log('Upload summary:', { successCount, errorCount, errors });
         }
         
+        // ===== FILE NOTE FUNCTIONS =====
+        const toggleFileNoteType = () => {
+            const noteType = document.querySelector('input[name="noteType"]:checked')?.value;
+            
+            // Hide all sections first
+            document.getElementById('fileNoteGeneralSection').style.display = 'none';
+            document.getElementById('fileNoteCourtSection').style.display = 'none';
+            document.getElementById('fileNoteEmailSection').style.display = 'none';
+            
+            // Show relevant section
+            if (noteType === 'general') {
+                document.getElementById('fileNoteGeneralSection').style.display = 'block';
+            } else if (noteType === 'court') {
+                document.getElementById('fileNoteCourtSection').style.display = 'block';
+            } else if (noteType === 'email') {
+                document.getElementById('fileNoteEmailSection').style.display = 'block';
+            }
+            
+            // Reset fields in hidden sections
+            if (noteType !== 'general') {
+                document.getElementById('contactType').value = '';
+                document.getElementById('whoPresent').value = '';
+                document.getElementById('meetingPurpose').value = '';
+                document.getElementById('discussion').value = '';
+                document.getElementById('clientInstructions').value = '';
+                document.getElementById('documentsHandled').value = '';
+                document.getElementById('nextSteps').value = '';
+                document.getElementById('followUpNo').checked = true;
+                document.getElementById('followUpDetails').style.display = 'none';
+            }
+            
+            if (noteType !== 'court') {
+                document.getElementById('courtLocation').value = '';
+                document.getElementById('listedFor').value = '';
+                document.getElementById('whoAppearedFileNote').value = '';
+                document.getElementById('whatOccurredFileNote').value = '';
+                document.getElementById('prosecutionPosition').value = '';
+                document.getElementById('courtOutcome').value = '';
+                document.getElementById('nextCourtDateFileNote').value = '';
+                document.getElementById('multipleMatters').checked = false;
+                document.getElementById('multipleMattersSection').style.display = 'none';
+            }
+            
+            if (noteType !== 'email') {
+                document.getElementById('otherParties').value = '';
+                document.getElementById('subjectMatter').value = '';
+                document.getElementById('keyPoints').value = '';
+                document.getElementById('attachments').value = '';
+                document.getElementById('actionRequired').value = '';
+                document.getElementById('responseNo').checked = true;
+                document.getElementById('responseDateSection').style.display = 'none';
+            }
+        };
+        
+        const toggleFileNoteClientSelection = () => {
+            const source = document.querySelector('input[name="fileNoteClientSource"]:checked')?.value;
+            
+            if (source === 'database') {
+                document.getElementById('fileNoteDatabaseSelection').style.display = 'block';
+                document.getElementById('fileNoteManualEntry').style.display = 'none';
+                
+                // Load client dropdown
+                const select = document.getElementById('fileNoteClientSelect');
+                select.innerHTML = '<option value="">-- Select a Client --</option>' +
+                    clients.map(c => `<option value="${c.id}">${c.name} (${c.matterNumber})</option>`).join('');
+            } else {
+                document.getElementById('fileNoteDatabaseSelection').style.display = 'none';
+                document.getElementById('fileNoteManualEntry').style.display = 'block';
+                
+                // Clear manual fields
+                document.getElementById('fileNoteManualName').value = '';
+                document.getElementById('fileNoteManualMatter').value = '';
+                document.getElementById('fileNoteManualCourt').value = '';
+                document.getElementById('fileNoteManualCharges').value = '';
+            }
+        };
+        
+        const loadFileNoteClientInfo = () => {
+            const clientId = parseInt(document.getElementById('fileNoteClientSelect').value);
+            if (!clientId) return;
+            
+            const client = clients.find(c => c.id === clientId);
+            if (!client) return;
+            
+            // Auto-populate court field if in court appearance mode
+            if (document.querySelector('input[name="noteType"]:checked')?.value === 'court') {
+                document.getElementById('courtLocation').value = client.court || '';
+            }
+        };
+        
+        const toggleFollowUpDetails = () => {
+            const followUp = document.querySelector('input[name="followUp"]:checked')?.value;
+            document.getElementById('followUpDetails').style.display = followUp === 'yes' ? 'block' : 'none';
+            if (followUp === 'no') {
+                document.getElementById('followUpText').value = '';
+            }
+        };
+        
+        const toggleMultipleMatters = () => {
+            const checked = document.getElementById('multipleMatters').checked;
+            document.getElementById('multipleMattersSection').style.display = checked ? 'block' : 'none';
+            if (checked) {
+                updateMultipleMatterFields();
+            } else {
+                document.getElementById('multipleMatterFields').innerHTML = '';
+            }
+        };
+        
+        const updateMultipleMatterFields = () => {
+            const count = parseInt(document.getElementById('numberOfMatters').value) || 2;
+            const container = document.getElementById('multipleMatterFields');
+            
+            let html = '';
+            for (let i = 1; i <= count; i++) {
+                html += `
+                    <div style="border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 15px; border-radius: 4px;">
+                        <h5>Matter ${i}</h5>
+                        <div class="form-group">
+                            <label for="matter${i}Name">Matter Name/Reference:</label>
+                            <input type="text" id="matter${i}Name" placeholder="e.g., Smith - Assault">
+                        </div>
+                        <div class="form-group">
+                            <label for="matter${i}Occurred">What Occurred:</label>
+                            <textarea id="matter${i}Occurred" rows="2"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="matter${i}Outcome">Outcome:</label>
+                            <input type="text" id="matter${i}Outcome">
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        };
+        
+        const toggleResponseDate = () => {
+            const response = document.querySelector('input[name="responseRequired"]:checked')?.value;
+            document.getElementById('responseDateSection').style.display = response === 'yes' ? 'block' : 'none';
+            if (response === 'no') {
+                document.getElementById('responseDate').value = '';
+            }
+        };
+        
+        const generateFileNotePrompt = () => {
+            const noteType = document.querySelector('input[name="noteType"]:checked')?.value;
+            const source = document.querySelector('input[name="fileNoteClientSource"]:checked')?.value;
+            
+            // Get client info
+            let clientName, matterNumber, court, charges;
+            if (source === 'database') {
+                const clientId = parseInt(document.getElementById('fileNoteClientSelect').value);
+                if (!clientId) {
+                    alert('Please select a client');
+                    return;
+                }
+                const client = clients.find(c => c.id === clientId);
+                clientName = client.name;
+                matterNumber = client.matterNumber;
+                court = client.court;
+                charges = client.charges;
+            } else {
+                clientName = document.getElementById('fileNoteManualName').value;
+                matterNumber = document.getElementById('fileNoteManualMatter').value;
+                court = document.getElementById('fileNoteManualCourt').value;
+                charges = document.getElementById('fileNoteManualCharges').value;
+            }
+            
+            if (!clientName || !matterNumber) {
+                alert('Please provide client name and matter reference');
+                return;
+            }
+            
+            const date = document.getElementById('fileNoteDate').value;
+            const startTime = document.getElementById('fileNoteStartTime').value;
+            const endTime = document.getElementById('fileNoteEndTime').value;
+            const urgent = document.getElementById('urgentFollowUp').checked;
+            
+            let prompt = `FILE NOTE\n\n`;
+            prompt += `Client: ${clientName}\n`;
+            prompt += `Matter Reference: ${matterNumber}\n`;
+            if (court) prompt += `Court: ${court}\n`;
+            if (charges) prompt += `Charges: ${charges}\n`;
+            prompt += `Date: ${date ? formatDate(date) : 'Not specified'}\n`;
+            if (startTime) prompt += `Time: ${startTime}${endTime ? ` - ${endTime}` : ''}\n`;
+            prompt += `\n`;
+            
+            // Add type-specific content
+            if (noteType === 'general') {
+                const contactType = document.getElementById('contactType').value;
+                const whoPresent = document.getElementById('whoPresent').value;
+                const purpose = document.getElementById('meetingPurpose').value;
+                const discussion = document.getElementById('discussion').value;
+                const instructions = document.getElementById('clientInstructions').value;
+                const documents = document.getElementById('documentsHandled').value;
+                const nextSteps = document.getElementById('nextSteps').value;
+                const followUp = document.querySelector('input[name="followUp"]:checked')?.value;
+                const followUpText = document.getElementById('followUpText').value;
+                
+                prompt += `TYPE: ${contactType || 'Meeting/Conference'}\n`;
+                if (whoPresent) prompt += `Present: ${whoPresent}\n`;
+                if (purpose) prompt += `Purpose: ${purpose}\n`;
+                prompt += `\n`;
+                
+                if (discussion) {
+                    prompt += `DISCUSSION:\n${discussion}\n\n`;
+                }
+                
+                if (instructions) {
+                    prompt += `CLIENT INSTRUCTIONS:\n${instructions}\n\n`;
+                }
+                
+                if (documents) {
+                    prompt += `DOCUMENTS HANDLED:\n${documents}\n\n`;
+                }
+                
+                if (nextSteps) {
+                    prompt += `NEXT STEPS:\n${nextSteps}\n\n`;
+                }
+                
+                if (followUp === 'yes' && followUpText) {
+                    prompt += `FOLLOW-UP REQUIRED:\n${followUpText}\n\n`;
+                }
+                
+            } else if (noteType === 'court') {
+                const courtLocation = document.getElementById('courtLocation').value;
+                const listedFor = document.getElementById('listedFor').value;
+                const whoAppeared = document.getElementById('whoAppearedFileNote').value;
+                const clientAttendance = document.querySelector('input[name="clientAttendance"]:checked')?.value;
+                const whatOccurred = document.getElementById('whatOccurredFileNote').value;
+                const prosecution = document.getElementById('prosecutionPosition').value;
+                const outcome = document.getElementById('courtOutcome').value;
+                const nextCourt = document.getElementById('nextCourtDateFileNote').value;
+                const instructionsConfirmed = document.querySelector('input[name="instructionsConfirmed"]:checked')?.value;
+                const multipleMatters = document.getElementById('multipleMatters').checked;
+                
+                prompt += `TYPE: Court Appearance\n`;
+                prompt += `Court: ${courtLocation || court || 'Not specified'}\n`;
+                if (listedFor) prompt += `Listed For: ${listedFor}\n`;
+                if (whoAppeared) prompt += `Appeared: ${whoAppeared}\n`;
+                if (clientAttendance) {
+                    const attendanceText = clientAttendance === 'attended' ? 'Client attended' :
+                                          clientAttendance === 'excused' ? 'Client excused' :
+                                          'Client appeared via AVL';
+                    prompt += `${attendanceText}\n`;
+                }
+                prompt += `\n`;
+                
+                if (multipleMatters) {
+                    const count = parseInt(document.getElementById('numberOfMatters').value) || 2;
+                    prompt += `MULTIPLE MATTERS DEALT WITH:\n`;
+                    for (let i = 1; i <= count; i++) {
+                        const name = document.getElementById(`matter${i}Name`)?.value;
+                        const occurred = document.getElementById(`matter${i}Occurred`)?.value;
+                        const matterOutcome = document.getElementById(`matter${i}Outcome`)?.value;
+                        
+                        if (name || occurred || matterOutcome) {
+                            prompt += `\nMatter ${i}: ${name || 'Not specified'}\n`;
+                            if (occurred) prompt += `What Occurred: ${occurred}\n`;
+                            if (matterOutcome) prompt += `Outcome: ${matterOutcome}\n`;
+                        }
+                    }
+                    prompt += `\n`;
+                }
+                
+                if (whatOccurred) {
+                    prompt += `WHAT OCCURRED:\n${whatOccurred}\n\n`;
+                }
+                
+                if (prosecution) {
+                    prompt += `PROSECUTION POSITION:\n${prosecution}\n\n`;
+                }
+                
+                if (outcome) {
+                    prompt += `OUTCOME:\n${outcome}\n\n`;
+                }
+                
+                if (nextCourt) {
+                    prompt += `NEXT COURT DATE: ${formatDate(nextCourt)}\n\n`;
+                }
+                
+                if (instructionsConfirmed) {
+                    prompt += `Instructions ${instructionsConfirmed === 'yes' ? 'confirmed' : 'to be confirmed'} with client\n\n`;
+                }
+                
+            } else if (noteType === 'email') {
+                const direction = document.querySelector('input[name="emailDirection"]:checked')?.value;
+                const otherParties = document.getElementById('otherParties').value;
+                const subject = document.getElementById('subjectMatter').value;
+                const keyPoints = document.getElementById('keyPoints').value;
+                const attachments = document.getElementById('attachments').value;
+                const responseRequired = document.querySelector('input[name="responseRequired"]:checked')?.value;
+                const responseDate = document.getElementById('responseDate').value;
+                const action = document.getElementById('actionRequired').value;
+                
+                prompt += `TYPE: Email/Correspondence\n`;
+                if (direction) {
+                    const dirText = direction === 'sent' ? 'Sent to' :
+                                   direction === 'received' ? 'Received from' :
+                                   'Exchange with';
+                    prompt += `${dirText}: ${otherParties || 'Not specified'}\n`;
+                }
+                if (subject) prompt += `Subject: ${subject}\n`;
+                prompt += `\n`;
+                
+                if (keyPoints) {
+                    prompt += `KEY POINTS:\n${keyPoints}\n\n`;
+                }
+                
+                if (attachments) {
+                    prompt += `ATTACHMENTS:\n${attachments}\n\n`;
+                }
+                
+                if (responseRequired === 'yes' && responseDate) {
+                    prompt += `RESPONSE REQUIRED BY: ${formatDate(responseDate)}\n\n`;
+                }
+                
+                if (action) {
+                    prompt += `ACTION REQUIRED:\n${action}\n\n`;
+                }
+            }
+            
+            if (urgent) {
+                prompt += `*** URGENT FOLLOW-UP REQUIRED ***\n\n`;
+            }
+            
+            prompt += `File note prepared by: [Solicitor Name]\n`;
+            prompt += `Time recorded: ${calculateTimeUnits(startTime, endTime)} units`;
+            
+            // Store the generated prompt
+            currentFileNotePrompt = prompt;
+            
+            // Display the prompt
+            const output = document.getElementById('fileNoteOutput');
+            output.innerHTML = `<pre>${prompt}</pre>`;
+            output.style.display = 'block';
+            
+            // Update client's file note history if from database
+            if (source === 'database') {
+                const clientId = parseInt(document.getElementById('fileNoteClientSelect').value);
+                const client = clients.find(c => c.id === clientId);
+                if (client) {
+                    if (!client.fileNotes) client.fileNotes = [];
+                    client.fileNotes.push({
+                        date: date || getTodayDate(),
+                        type: noteType,
+                        content: prompt
+                    });
+                    saveData();
+                }
+            }
+        };
+        
+        const calculateTimeUnits = (startTime, endTime) => {
+            if (!startTime || !endTime) return '0';
+            
+            const start = new Date(`2000-01-01T${startTime}`);
+            const end = new Date(`2000-01-01T${endTime}`);
+            const diffMinutes = (end - start) / 60000;
+            
+            // Convert to 6-minute units (0.1 hour units)
+            return Math.ceil(diffMinutes / 6);
+        };
+        
+        let currentFileNotePrompt = '';
+        
+        const copyFileNotePrompt = () => {
+            if (!currentFileNotePrompt) {
+                alert('Please generate a file note first');
+                return;
+            }
+            
+            navigator.clipboard.writeText(currentFileNotePrompt).then(() => {
+                alert('File note copied to clipboard!');
+            }).catch(err => {
+                alert('Failed to copy to clipboard');
+                console.error('Copy failed:', err);
+            });
+        };
+        
+        const sendFileNoteToZapier = async () => {
+            if (!currentFileNotePrompt) {
+                alert('Please generate a file note first');
+                return;
+            }
+            
+            const noteType = document.querySelector('input[name="noteType"]:checked')?.value;
+            const source = document.querySelector('input[name="fileNoteClientSource"]:checked')?.value;
+            
+            let clientName, matterNumber;
+            if (source === 'database') {
+                const clientId = parseInt(document.getElementById('fileNoteClientSelect').value);
+                const client = clients.find(c => c.id === clientId);
+                clientName = client.name;
+                matterNumber = client.matterNumber;
+            } else {
+                clientName = document.getElementById('fileNoteManualName').value;
+                matterNumber = document.getElementById('fileNoteManualMatter').value;
+            }
+            
+            const statusDiv = document.getElementById('fileNoteZapierStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#3b82f6';
+            statusDiv.style.color = 'white';
+            statusDiv.innerHTML = 'Sending to Zapier...';
+            
+            try {
+                const webhookUrl = 'YOUR_ZAPIER_WEBHOOK_URL_HERE'; // Replace with actual webhook
+                
+                const payload = {
+                    type: 'FILE_NOTE',
+                    fileNoteType: noteType,
+                    clientName: clientName,
+                    matterNumber: matterNumber,
+                    date: document.getElementById('fileNoteDate').value || getTodayDate(),
+                    prompt: currentFileNotePrompt,
+                    fileNote: true,
+                    urgent: document.getElementById('urgentFollowUp').checked,
+                    fileNoteData: {
+                        noteType: noteType,
+                        startTime: document.getElementById('fileNoteStartTime').value,
+                        endTime: document.getElementById('fileNoteEndTime').value,
+                        // Include all relevant form data based on note type
+                    }
+                };
+                
+                const formData = new FormData();
+                Object.keys(payload).forEach(key => {
+                    formData.append(key, typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]);
+                });
+                
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    statusDiv.style.background = '#16a34a';
+                    statusDiv.innerHTML = '✅ File note sent to Zapier successfully!';
+                    
+                    // Update database if successful and from database
+                    if (source === 'database') {
+                        const clientId = parseInt(document.getElementById('fileNoteClientSelect').value);
+                        const client = clients.find(c => c.id === clientId);
+                        if (client) {
+                            if (!client.zapierSent) client.zapierSent = [];
+                            client.zapierSent.push({
+                                type: 'FileNote',
+                                date: new Date().toISOString(),
+                                noteType: noteType
+                            });
+                            saveData();
+                        }
+                    }
+                    
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 5000);
+                } else {
+                    throw new Error('Failed to send to Zapier');
+                }
+            } catch (error) {
+                statusDiv.style.background = '#dc2626';
+                statusDiv.innerHTML = '❌ Error: ' + error.message;
+                console.error('Zapier error:', error);
+            }
+        };
+        
+        const clearFileNoteForm = () => {
+            if (!confirm('Are you sure you want to clear all form data?')) return;
+            
+            // Reset note type to general
+            document.getElementById('noteTypeGeneral').checked = true;
+            toggleFileNoteType();
+            
+            // Reset client selection
+            document.getElementById('fileNoteClientDatabase').checked = true;
+            toggleFileNoteClientSelection();
+            document.getElementById('fileNoteClientSelect').value = '';
+            
+            // Clear all date/time fields
+            document.getElementById('fileNoteDate').value = '';
+            document.getElementById('fileNoteStartTime').value = '';
+            document.getElementById('fileNoteEndTime').value = '';
+            
+            // Clear all form fields in all sections
+            const formElements = document.querySelectorAll('#filenote input[type="text"], #filenote input[type="date"], #filenote input[type="time"], #filenote textarea, #filenote select');
+            formElements.forEach(element => {
+                if (element.type === 'radio' || element.type === 'checkbox') {
+                    element.checked = false;
+                } else {
+                    element.value = '';
+                }
+            });
+            
+            // Reset radio buttons to defaults
+            document.getElementById('followUpNo').checked = true;
+            document.getElementById('responseNo').checked = true;
+            
+            // Hide conditional sections
+            document.getElementById('followUpDetails').style.display = 'none';
+            document.getElementById('responseDateSection').style.display = 'none';
+            document.getElementById('multipleMattersSection').style.display = 'none';
+            
+            // Clear output
+            document.getElementById('fileNoteOutput').style.display = 'none';
+            document.getElementById('fileNoteOutput').innerHTML = '';
+            document.getElementById('fileNoteZapierStatus').style.display = 'none';
+            currentFileNotePrompt = '';
+        };
+        
         // ===== INITIALIZATION =====
         document.addEventListener('DOMContentLoaded', () => {
             loadSavedData();
@@ -3192,6 +3710,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             <button class="tab" onclick="switchTab('cdr', event)">CDR</button>
             <button class="tab" onclick="switchTab('calendar', event)">Court Calendar</button>
             <button class="tab" onclick="switchTab('analytics', event)">Analytics</button>
+            <button class="tab" onclick="switchTab('filenote', event)">File Note</button>
         </div>
         
         <!-- Master Client List Tab -->
@@ -3547,6 +4066,319 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         <div id="weekTotals" class="week-totals">
             <!-- Week totals will be inserted here -->
         </div>
+    </div>
+    
+    <!-- File Note Tab -->
+    <div id="filenote" class="tab-content">
+        <h2>Generate File Note</h2>
+        <p>Create formal documentation of client interactions and court appearances</p>
+        
+        <!-- Note Type Selection -->
+        <div class="section">
+            <div class="section-title">Note Type</div>
+            <div class="radio-group">
+                <div class="radio-item">
+                    <input type="radio" id="noteTypeGeneral" name="noteType" value="general" checked onchange="toggleFileNoteType()">
+                    <label for="noteTypeGeneral">General Meeting/Conference</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="noteTypeCourt" name="noteType" value="court" onchange="toggleFileNoteType()">
+                    <label for="noteTypeCourt">Court Appearance</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="noteTypeEmail" name="noteType" value="email" onchange="toggleFileNoteType()">
+                    <label for="noteTypeEmail">Email/Correspondence</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Client Information Section -->
+        <div class="section">
+            <div class="section-title">Client Information</div>
+            <div class="radio-group">
+                <div class="radio-item">
+                    <input type="radio" id="fileNoteClientDatabase" name="fileNoteClientSource" value="database" checked onchange="toggleFileNoteClientSelection()">
+                    <label for="fileNoteClientDatabase">Select from Database</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="fileNoteClientManual" name="fileNoteClientSource" value="manual" onchange="toggleFileNoteClientSelection()">
+                    <label for="fileNoteClientManual">Manual Entry</label>
+                </div>
+            </div>
+            
+            <div id="fileNoteDatabaseSelection" style="margin-top: 15px;">
+                <div class="form-group">
+                    <label for="fileNoteClientSelect">Select Client:</label>
+                    <select id="fileNoteClientSelect" onchange="loadFileNoteClientInfo()">
+                        <option value="">-- Select a Client --</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="fileNoteManualEntry" style="display: none; margin-top: 15px;">
+                <div class="form-group">
+                    <label for="fileNoteManualName">Client Name:</label>
+                    <input type="text" id="fileNoteManualName">
+                </div>
+                <div class="form-group">
+                    <label for="fileNoteManualMatter">Matter Reference:</label>
+                    <input type="text" id="fileNoteManualMatter">
+                </div>
+                <div class="form-group">
+                    <label for="fileNoteManualCourt">Court:</label>
+                    <input type="text" id="fileNoteManualCourt">
+                </div>
+                <div class="form-group">
+                    <label for="fileNoteManualCharges">Charges:</label>
+                    <input type="text" id="fileNoteManualCharges">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="fileNoteDate">Date:</label>
+                <input type="date" id="fileNoteDate">
+            </div>
+            <div class="form-group">
+                <label for="fileNoteStartTime">Start Time:</label>
+                <input type="time" id="fileNoteStartTime">
+            </div>
+            <div class="form-group">
+                <label for="fileNoteEndTime">End Time:</label>
+                <input type="time" id="fileNoteEndTime">
+            </div>
+        </div>
+        
+        <!-- General Meeting Section -->
+        <div id="fileNoteGeneralSection" class="section">
+            <div class="section-title">Meeting Details</div>
+            <div class="form-group">
+                <label for="contactType">Contact Type:</label>
+                <select id="contactType">
+                    <option value="">-- Select Type --</option>
+                    <option value="Phone">Phone</option>
+                    <option value="Office">Office Meeting</option>
+                    <option value="Video">Video Conference</option>
+                    <option value="Home Visit">Home Visit</option>
+                    <option value="Custody Visit">Custody Visit</option>
+                    <option value="Hospital Visit">Hospital Visit</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="whoPresent">Who was Present:</label>
+                <input type="text" id="whoPresent" placeholder="e.g., Client, Support Person, Interpreter">
+            </div>
+            <div class="form-group">
+                <label for="meetingPurpose">Purpose:</label>
+                <input type="text" id="meetingPurpose" placeholder="e.g., Initial conference, Pre-trial conference">
+            </div>
+            <div class="form-group">
+                <label for="discussion">Discussion:</label>
+                <textarea id="discussion" rows="4" placeholder="Summary of what was discussed"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="clientInstructions">Client Instructions:</label>
+                <textarea id="clientInstructions" rows="3" placeholder="Instructions received from client"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="documentsHandled">Documents Handled:</label>
+                <input type="text" id="documentsHandled" placeholder="e.g., Brief of evidence provided, Forms signed">
+            </div>
+            <div class="form-group">
+                <label for="nextSteps">Next Steps:</label>
+                <textarea id="nextSteps" rows="3" placeholder="Actions to be taken"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Follow-up Required:</label>
+                <div class="radio-group">
+                    <div class="radio-item">
+                        <input type="radio" id="followUpYes" name="followUp" value="yes" onchange="toggleFollowUpDetails()">
+                        <label for="followUpYes">Yes</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="followUpNo" name="followUp" value="no" checked onchange="toggleFollowUpDetails()">
+                        <label for="followUpNo">No</label>
+                    </div>
+                </div>
+                <div id="followUpDetails" style="display: none; margin-top: 10px;">
+                    <input type="text" id="followUpText" placeholder="Describe follow-up required">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Court Appearance Section -->
+        <div id="fileNoteCourtSection" class="section" style="display: none;">
+            <div class="section-title">Court Appearance Details</div>
+            <div class="form-group">
+                <label for="courtLocation">Court:</label>
+                <input type="text" id="courtLocation" placeholder="Will auto-populate if client selected">
+            </div>
+            <div class="form-group">
+                <label for="listedFor">Listed For:</label>
+                <select id="listedFor">
+                    <option value="">-- Select --</option>
+                    <option value="Mention">Mention</option>
+                    <option value="Mention (Brief Reply)">Mention (Brief Reply)</option>
+                    <option value="Sentence">Sentence</option>
+                    <option value="Hearing">Hearing</option>
+                    <option value="Trial">Trial</option>
+                    <option value="Compliance Mention">Compliance Mention</option>
+                    <option value="Brief Status">Brief Status</option>
+                    <option value="Charge Certification">Charge Certification</option>
+                    <option value="Committal">Committal</option>
+                    <option value="Arraignment">Arraignment</option>
+                    <option value="Return of Subpoena">Return of Subpoena</option>
+                    <option value="Section 14 Application">Section 14 Application</option>
+                    <option value="Bail Application">Bail Application</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="whoAppeared">Who Appeared:</label>
+                <select id="whoAppearedFileNote">
+                    <option value="">-- Select --</option>
+                    <option value="Solicitor">Solicitor</option>
+                    <option value="Barrister">Barrister</option>
+                    <option value="Both Solicitor and Barrister">Both Solicitor and Barrister</option>
+                    <option value="Client self-represented">Client self-represented</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Client Attendance:</label>
+                <div class="radio-group">
+                    <div class="radio-item">
+                        <input type="radio" id="clientAttended" name="clientAttendance" value="attended">
+                        <label for="clientAttended">Attended</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="clientExcused" name="clientAttendance" value="excused">
+                        <label for="clientExcused">Excused</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="clientAVL" name="clientAttendance" value="avl">
+                        <label for="clientAVL">Via AVL</label>
+                    </div>
+                </div>
+            </div>
+            <div class="checkbox-item">
+                <input type="checkbox" id="multipleMatters" onchange="toggleMultipleMatters()">
+                <label for="multipleMatters">Multiple Matters</label>
+            </div>
+            <div id="multipleMattersSection" style="display: none; margin-top: 15px;">
+                <div class="form-group">
+                    <label for="numberOfMatters">Number of Matters:</label>
+                    <input type="number" id="numberOfMatters" min="2" max="10" value="2" onchange="updateMultipleMatterFields()">
+                </div>
+                <div id="multipleMatterFields">
+                    <!-- Dynamic matter fields will be inserted here -->
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="whatOccurredFileNote">What Occurred:</label>
+                <textarea id="whatOccurredFileNote" rows="4"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="prosecutionPosition">Prosecution Position:</label>
+                <input type="text" id="prosecutionPosition">
+            </div>
+            <div class="form-group">
+                <label for="courtOutcome">Outcome:</label>
+                <textarea id="courtOutcome" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="nextCourtDateFileNote">Next Court Date (if applicable):</label>
+                <input type="date" id="nextCourtDateFileNote">
+            </div>
+            <div class="form-group">
+                <label>Instructions Confirmed:</label>
+                <div class="radio-group">
+                    <div class="radio-item">
+                        <input type="radio" id="instructionsYes" name="instructionsConfirmed" value="yes">
+                        <label for="instructionsYes">Yes</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="instructionsNo" name="instructionsConfirmed" value="no">
+                        <label for="instructionsNo">No</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Email/Correspondence Section -->
+        <div id="fileNoteEmailSection" class="section" style="display: none;">
+            <div class="section-title">Email/Correspondence Details</div>
+            <div class="form-group">
+                <label>Direction:</label>
+                <div class="radio-group">
+                    <div class="radio-item">
+                        <input type="radio" id="emailSent" name="emailDirection" value="sent">
+                        <label for="emailSent">Sent</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="emailReceived" name="emailDirection" value="received">
+                        <label for="emailReceived">Received</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="emailExchange" name="emailDirection" value="exchange">
+                        <label for="emailExchange">Exchange</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="otherParties">Other Parties:</label>
+                <input type="text" id="otherParties" placeholder="e.g., Prosecutor, Court, Client">
+            </div>
+            <div class="form-group">
+                <label for="subjectMatter">Subject Matter:</label>
+                <input type="text" id="subjectMatter">
+            </div>
+            <div class="form-group">
+                <label for="keyPoints">Key Points:</label>
+                <textarea id="keyPoints" rows="4"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="attachments">Attachments:</label>
+                <input type="text" id="attachments" placeholder="e.g., Brief of evidence, Medical reports">
+            </div>
+            <div class="form-group">
+                <label>Response Required:</label>
+                <div class="radio-group">
+                    <div class="radio-item">
+                        <input type="radio" id="responseYes" name="responseRequired" value="yes" onchange="toggleResponseDate()">
+                        <label for="responseYes">Yes</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="responseNo" name="responseRequired" value="no" checked onchange="toggleResponseDate()">
+                        <label for="responseNo">No</label>
+                    </div>
+                </div>
+                <div id="responseDateSection" style="display: none; margin-top: 10px;">
+                    <label for="responseDate">Response Due:</label>
+                    <input type="date" id="responseDate">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="actionRequired">Action Required:</label>
+                <input type="text" id="actionRequired">
+            </div>
+        </div>
+        
+        <!-- Additional Options -->
+        <div class="section">
+            <div class="checkbox-item">
+                <input type="checkbox" id="urgentFollowUp">
+                <label for="urgentFollowUp">Urgent Follow-up Required</label>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div style="margin-top: 30px;">
+            <button class="btn btn-primary" onclick="generateFileNotePrompt()">Generate File Note Prompt</button>
+            <button class="btn btn-success" onclick="sendFileNoteToZapier()">Send to Zapier</button>
+            <button class="btn btn-success" onclick="copyFileNotePrompt()">Copy to Clipboard</button>
+            <button class="btn btn-secondary" onclick="clearFileNoteForm()">Clear Form</button>
+        </div>
+        
+        <div id="fileNoteOutput" class="output-box" style="display: none; margin-top: 20px;"></div>
+        <div id="fileNoteZapierStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
     </div>
     
     <!-- Add Client Modal -->
