@@ -2797,12 +2797,18 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             const overlay = document.querySelector('.mobile-menu-overlay');
             const menu = document.querySelector('.mobile-menu');
             
-            toggle.classList.toggle('active');
-            overlay.classList.toggle('active');
-            menu.classList.toggle('active');
+            console.log('Toggle found:', !!toggle);
+            console.log('Overlay found:', !!overlay);
+            console.log('Menu found:', !!menu);
+            
+            if (toggle) toggle.classList.toggle('active');
+            if (overlay) overlay.classList.toggle('active');
+            if (menu) menu.classList.toggle('active');
+            
+            console.log('Menu has active class:', menu?.classList.contains('active'));
             
             // Prevent body scroll when menu is open
-            if (menu.classList.contains('active')) {
+            if (menu && menu.classList.contains('active')) {
                 document.body.style.overflow = 'hidden';
             } else {
                 document.body.style.overflow = '';
@@ -3819,7 +3825,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         }
         
         .mobile-menu-overlay.active {
-            opacity: 1;
+            opacity: 1 !important;
         }
         
         .mobile-menu {
@@ -3838,7 +3844,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         }
         
         .mobile-menu.active {
-            right: 0;
+            right: 0 !important;
         }
         
         .mobile-menu-header {
@@ -4065,9 +4071,17 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 display: none;
             }
             
-            /* Show mobile menu toggle */
+            /* Show mobile menu elements */
             .mobile-menu-toggle {
                 display: flex;
+            }
+            
+            .mobile-menu-overlay {
+                display: block;
+            }
+            
+            .mobile-menu {
+                display: block;
             }
             
             /* Header adjustments */
