@@ -25,10 +25,10 @@
     </div>
 
     <!-- Template Selection -->
-    <div id="templateSelection" style="display: none;">
+    <div id="templateSelection">
         <div class="form-group">
             <label for="letterType">Select Letter Type:</label>
-            <select id="letterType" onchange="EventHandlers.selectTemplate(this.value)">
+            <select id="letterType" onchange="if(window.EventHandlers) EventHandlers.selectTemplate(this.value)">
                 <option value="">-- Select Letter Type --</option>
                 <option value="CCL">Client Care Letter (CCL)</option>
                 <option value="Mention">Mention Letter</option>
