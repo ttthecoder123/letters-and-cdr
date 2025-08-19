@@ -27,9 +27,19 @@
 
 <script>
 // Initialize File Note form when module loads
-document.addEventListener('DOMContentLoaded', () => {
+// Use a timeout to ensure all scripts are loaded
+setTimeout(() => {
     if (window.UIBuilder && document.getElementById('fileNoteForm')) {
-        UIBuilder.buildForm('FileNote', 'fileNoteForm');
+        console.log('Building File Note form...');
+        window.UIBuilder.buildForm('FileNote', 'fileNoteForm');
+    } else {
+        console.log('UIBuilder not ready for File Note, waiting...');
+        // Try again after a short delay
+        setTimeout(() => {
+            if (window.UIBuilder && document.getElementById('fileNoteForm')) {
+                window.UIBuilder.buildForm('FileNote', 'fileNoteForm');
+            }
+        }, 500);
     }
-});
+}, 100);
 </script>
