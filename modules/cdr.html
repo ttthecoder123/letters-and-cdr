@@ -24,9 +24,19 @@
 
 <script>
 // Initialize CDR form when module loads
-document.addEventListener('DOMContentLoaded', () => {
+// Use a timeout to ensure all scripts are loaded
+setTimeout(() => {
     if (window.UIBuilder && document.getElementById('cdrForm')) {
-        UIBuilder.buildForm('CDR', 'cdrForm');
+        console.log('Building CDR form...');
+        window.UIBuilder.buildForm('CDR', 'cdrForm');
+    } else {
+        console.log('UIBuilder not ready, waiting...');
+        // Try again after a short delay
+        setTimeout(() => {
+            if (window.UIBuilder && document.getElementById('cdrForm')) {
+                window.UIBuilder.buildForm('CDR', 'cdrForm');
+            }
+        }, 500);
     }
-});
+}, 100);
 </script>
