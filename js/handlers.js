@@ -327,6 +327,9 @@ const EventHandlers = {
             // Update selected client display
             this.updateSelectedClientDisplay(client);
             
+            // Show client info section
+            CoreUtils.showElement('clientInfoSection');
+            
             // Update form fields
             CoreUtils.setFormFieldValue('matterNumber', client.matterNumber);
             
