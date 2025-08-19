@@ -25,7 +25,8 @@ const UIBuilder = {
             case 'number':
             case 'tel':
             case 'email':
-                const defaultValue = this.getDefaultValue(type, value);
+                // Handle both 'value' and 'default' properties
+                const defaultValue = this.getDefaultValue(type, config.value || config.default);
                 fieldHTML = `<input type="${type}" id="${id}" 
                     ${placeholder ? `placeholder="${placeholder}"` : ''}
                     ${required ? 'required' : ''}
