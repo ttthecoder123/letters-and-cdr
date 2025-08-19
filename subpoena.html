@@ -18,6 +18,17 @@
             });
         };
 
+        const formatDateForSubpoena = (dateString) => {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const day = date.getDate();
+            const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            return `${day} ${month} ${year}`;
+        };
+
         const getTodayDate = () => new Date().toISOString().split('T')[0];
 
         const addDays = (date, days) => {
@@ -140,6 +151,7 @@
                 complianceDate: document.getElementById('complianceDate').value,
                 partyType: document.getElementById('partyType').value,
                 clientName: document.getElementById('clientName').value,
+                proceedingsNumber: document.getElementById('proceedingsNumber').value,
                 issuedFor: document.querySelector('input[name="issuedFor"]:checked')?.value,
                 documentsSought: document.getElementById('documentsSought').value,
                 solicitor: document.getElementById('solicitor').value
@@ -147,7 +159,7 @@
             
             // Validate required fields
             const requiredFields = ['recipientName', 'recipientAddress', 'courtLevel', 'courtLocation', 
-                                   'returnDate', 'complianceDate', 'clientName', 'issuedFor', 
+                                   'returnDate', 'complianceDate', 'clientName', 'proceedingsNumber', 'issuedFor', 
                                    'documentsSought', 'solicitor'];
             
             for (const field of requiredFields) {
@@ -183,6 +195,7 @@
 COURT DETAILS:
 Court: ${data.courtLevel} of New South Wales at ${data.courtLocation}
 Matter: ${data.partyType} ${data.clientName}
+Proceedings Number: ${data.proceedingsNumber}
 Issued on behalf of: ${data.issuedFor}
 
 SUBPOENA TO:
@@ -190,8 +203,8 @@ ${data.recipientName}
 ${data.recipientAddress}
 
 DATES:
-Return Date: ${formatDate(data.returnDate)}
-Compliance Date: ${formatDate(data.complianceDate)}
+Return Date: ${formatDateForSubpoena(data.returnDate)}
+Compliance Date: ${formatDateForSubpoena(data.complianceDate)}
 
 DOCUMENTS REQUIRED FOR PRODUCTION:
 ${data.documentsSought}
@@ -229,8 +242,8 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 type: 'SUBPOENA',
                 subpoenaData: {
                     ...currentSubpoenaData,
-                    formattedReturnDate: formatDate(currentSubpoenaData.returnDate),
-                    formattedComplianceDate: formatDate(currentSubpoenaData.complianceDate),
+                    formattedReturnDate: formatDateForSubpoena(currentSubpoenaData.returnDate),
+                    formattedComplianceDate: formatDateForSubpoena(currentSubpoenaData.complianceDate),
                     prompt: formatSubpoenaPrompt(currentSubpoenaData),
                     generatedDate: new Date().toISOString(),
                     firmDetails: {
@@ -297,6 +310,14 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 document.getElementById('zapierBtn').disabled = true;
                 currentSubpoenaData = null;
                 
+                // Reset organization fields to manual entry state
+                const recipientName = document.getElementById('recipientName');
+                const recipientAddress = document.getElementById('recipientAddress');
+                recipientName.readOnly = false;
+                recipientAddress.readOnly = false;
+                recipientName.style.backgroundColor = '';
+                recipientAddress.style.backgroundColor = '';
+                
                 // Reload client data if available
                 loadClientFromMain();
             }
@@ -317,6 +338,35 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 datalist.innerHTML = commonCourts[courtLevel].map(court => 
                     `<option value="${court}">`
                 ).join('');
+            }
+        };
+
+        const handleOrganizationChange = () => {
+            const organizationType = document.getElementById('organizationType').value;
+            const recipientName = document.getElementById('recipientName');
+            const recipientAddress = document.getElementById('recipientAddress');
+            
+            if (organizationType === 'NSW Police') {
+                recipientName.value = 'NSW Police Force, Infolink Unit';
+                recipientAddress.value = 'NSW Police Force, Infolink Unit\nLocked Bag 5102\nParramatta, NSW 2124';
+                
+                // Make fields read-only when NSW Police is selected
+                recipientName.readOnly = true;
+                recipientAddress.readOnly = true;
+                
+                // Add visual indication
+                recipientName.style.backgroundColor = '#f9fafb';
+                recipientAddress.style.backgroundColor = '#f9fafb';
+            } else {
+                // Clear fields and make them editable for manual entry
+                recipientName.value = '';
+                recipientAddress.value = '';
+                recipientName.readOnly = false;
+                recipientAddress.readOnly = false;
+                
+                // Remove visual indication
+                recipientName.style.backgroundColor = '';
+                recipientAddress.style.backgroundColor = '';
             }
         };
 
@@ -511,6 +561,14 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
             outline: none;
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group input[readonly],
+        .form-group textarea[readonly] {
+            background-color: #f9fafb !important;
+            color: #6b7280;
+            cursor: not-allowed;
+            border-color: #d1d5db;
         }
 
         textarea {
@@ -736,6 +794,17 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                     <h2 class="section-title">Recipient Details</h2>
                     
                     <div class="form-group">
+                        <label for="organizationType">
+                            Organization Type
+                        </label>
+                        <select id="organizationType" onchange="handleOrganizationChange()">
+                            <option value="">-- Manual Entry --</option>
+                            <option value="NSW Police">NSW Police Force</option>
+                        </select>
+                        <span class="helper-text">Select for pre-filled details or choose manual entry</span>
+                    </div>
+
+                    <div class="form-group">
                         <label for="recipientName">
                             Name of Person/Organization <span class="required">*</span>
                         </label>
@@ -811,6 +880,14 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                             Client Name <span class="required">*</span>
                         </label>
                         <input type="text" id="clientName" placeholder="Enter client name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="proceedingsNumber">
+                            Proceedings Number <span class="required">*</span>
+                        </label>
+                        <input type="text" id="proceedingsNumber" placeholder="e.g., 2024/12345678" required>
+                        <span class="helper-text">Court file number or proceedings number</span>
                     </div>
 
                     <div class="form-group">
