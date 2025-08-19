@@ -1,0 +1,35 @@
+<h2>Generate File Note</h2>
+<p>Create formal documentation of client interactions and court appearances</p>
+
+<!-- Client Selection Section -->
+<div class="form-group">
+    <label for="fileNoteClientSelect">Select Client (Optional):</label>
+    <select id="fileNoteClientSelect" onchange="loadFileNoteClientInfo()">
+        <option value="">-- Manual Entry --</option>
+    </select>
+</div>
+
+<!-- Client Information Display -->
+<div id="fileNoteClientInfo" style="display: none; margin: 10px 0; padding: 10px; background: #f0f9ff; border-radius: 6px;"></div>
+
+<!-- Dynamic File Note Form Container -->
+<div id="fileNoteForm"></div>
+
+<!-- Form Actions -->
+<div class="form-actions" style="margin-top: 30px;">
+    <button class="btn btn-primary" onclick="EventHandlers.generateFileNote()">Generate File Note</button>
+    <button class="btn btn-secondary" onclick="CoreUtils.clearFormFields('moduleContainer')">Clear Form</button>
+</div>
+
+<!-- Output Section -->
+<div id="fileNoteOutput" style="display: none; margin-top: 20px;"></div>
+<div id="fileNoteStatus" style="display: none; margin-top: 10px;"></div>
+
+<script>
+// Initialize File Note form when module loads
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.UIBuilder && document.getElementById('fileNoteForm')) {
+        UIBuilder.buildForm('FileNote', 'fileNoteForm');
+    }
+});
+</script>

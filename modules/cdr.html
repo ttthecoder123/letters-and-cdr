@@ -1,0 +1,32 @@
+<h2>Court Diary Request (CDR)</h2>
+<p>Generate CDR for court appearances</p>
+
+<!-- Client Selection Section -->
+<div class="form-group">
+    <label for="cdrClientSelect">Select Client (Optional):</label>
+    <select id="cdrClientSelect" onchange="loadCDRClientInfo()">
+        <option value="">-- Manual Entry --</option>
+    </select>
+</div>
+
+<!-- Dynamic CDR Form Container -->
+<div id="cdrForm"></div>
+
+<!-- Form Actions -->
+<div class="form-actions" style="margin-top: 30px;">
+    <button class="btn btn-primary" onclick="EventHandlers.generateCDR()">Generate CDR</button>
+    <button class="btn btn-secondary" onclick="CoreUtils.clearFormFields('moduleContainer')">Clear Form</button>
+</div>
+
+<!-- Output Section -->
+<div id="cdrOutputText" style="display: none; margin-top: 20px;"></div>
+<div id="cdrStatus" style="display: none; margin-top: 10px;"></div>
+
+<script>
+// Initialize CDR form when module loads
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.UIBuilder && document.getElementById('cdrForm')) {
+        UIBuilder.buildForm('CDR', 'cdrForm');
+    }
+});
+</script>
