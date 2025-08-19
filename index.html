@@ -388,6 +388,8 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         };
 
         const generateCDR = () => {
+            // Reinitialize checkbox handlers in case they were lost
+            initializeCheckboxHandlers();
             const cdrData = {
                 outcomeCourt: document.getElementById('cdrOutcomeCourt').value,
                 outcomeDate: document.getElementById('cdrOutcomeDate').value,
@@ -2784,23 +2786,85 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         document.addEventListener('DOMContentLoaded', () => {
             loadSavedData();
             updateUI();
+            initializeCheckboxHandlers();
         });
+
+        // Initialize checkbox handlers for better mobile support
+        const initializeCheckboxHandlers = () => {
+            // Add click handlers to checkbox containers for better mobile support
+            document.querySelectorAll('.checkbox-item').forEach(item => {
+                // Remove any existing listeners
+                item.removeEventListener('click', handleCheckboxClick);
+                item.removeEventListener('touchend', handleCheckboxTouch);
+                
+                // Add new listeners
+                item.addEventListener('click', handleCheckboxClick);
+                item.addEventListener('touchend', handleCheckboxTouch);
+                
+                // Update visual state based on checkbox
+                const checkbox = item.querySelector('input[type="checkbox"], input[type="radio"]');
+                if (checkbox && checkbox.checked) {
+                    item.classList.add('checked');
+                }
+            });
+        };
+
+        const handleCheckboxClick = function(e) {
+            // Prevent double triggering
+            if (e.detail > 1) return;
+            
+            const checkbox = this.querySelector('input[type="checkbox"], input[type="radio"]');
+            if (!checkbox || e.target === checkbox) return;
+            
+            e.preventDefault();
+            checkbox.checked = !checkbox.checked;
+            
+            // Update visual state
+            if (checkbox.checked) {
+                this.classList.add('checked');
+            } else {
+                this.classList.remove('checked');
+            }
+            
+            // Trigger change event
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+
+        const handleCheckboxTouch = function(e) {
+            // Prevent click event from also firing
+            e.preventDefault();
+            
+            const checkbox = this.querySelector('input[type="checkbox"], input[type="radio"]');
+            if (!checkbox) return;
+            
+            checkbox.checked = !checkbox.checked;
+            
+            // Update visual state
+            if (checkbox.checked) {
+                this.classList.add('checked');
+            } else {
+                this.classList.remove('checked');
+            }
+            
+            // Trigger change event
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        };
 
         window.onclick = (event) => {
             const modal = document.getElementById('addClientModal');
             if (event.target === modal) closeModal();
         };
-        
+
         // ===== MOBILE MENU FUNCTIONS =====
         const toggleMobileMenu = () => {
             const toggle = document.querySelector('.mobile-menu-toggle');
             const overlay = document.querySelector('.mobile-menu-overlay');
             const menu = document.querySelector('.mobile-menu');
-            
+
             if (toggle) toggle.classList.toggle('active');
             if (overlay) overlay.classList.toggle('active');
             if (menu) menu.classList.toggle('active');
-            
+
             // Prevent body scroll when menu is open
             if (menu && menu.classList.contains('active')) {
                 document.body.style.overflow = 'hidden';
@@ -2808,48 +2872,48 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 document.body.style.overflow = '';
             }
         };
-        
+
         const closeMobileMenu = () => {
             const toggle = document.querySelector('.mobile-menu-toggle');
             const overlay = document.querySelector('.mobile-menu-overlay');
             const menu = document.querySelector('.mobile-menu');
-            
+
             toggle.classList.remove('active');
             overlay.classList.remove('active');
             menu.classList.remove('active');
             document.body.style.overflow = '';
         };
-        
+
         const switchTabMobile = (tabName, event) => {
             // Update mobile menu active state
             document.querySelectorAll('.mobile-menu-tab').forEach(t => t.classList.remove('active'));
             if (event && event.target) {
                 event.target.classList.add('active');
             }
-            
+
             // Switch the actual tab
             switchTab(tabName, null);
-            
+
             // Close mobile menu
             closeMobileMenu();
         };
-        
+
         const toggleClientCard = (cardElement) => {
             cardElement.classList.toggle('expanded');
         };
-        
+
         // Close mobile menu when clicking outside
         document.addEventListener('click', (event) => {
             const menu = document.querySelector('.mobile-menu');
             const toggle = document.querySelector('.mobile-menu-toggle');
-            
-            if (menu.classList.contains('active') && 
-                !menu.contains(event.target) && 
+
+            if (menu.classList.contains('active') &&
+                !menu.contains(event.target) &&
                 !toggle.contains(event.target)) {
                 closeMobileMenu();
             }
         });
-        
+
         // Handle window resize
         window.addEventListener('resize', () => {
             if (window.innerWidth > 768) {
@@ -2997,11 +3061,17 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         .checkbox-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
+            gap: 12px;
+            padding: 12px 16px;
             border: 2px solid #e5e7eb;
             border-radius: 6px;
             transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         .checkbox-item:hover {
@@ -3009,8 +3079,33 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             background: #f8fafc;
         }
 
+        .checkbox-item.checked {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            flex: 1;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            pointer-events: none;
+        }
+
         .checkbox-item input[type="checkbox"],
-        .checkbox-item input[type="radio"] { width: auto; }
+        .checkbox-item input[type="radio"] { 
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            min-height: 20px;
+            cursor: pointer;
+            flex-shrink: 0;
+            margin: 0;
+            -webkit-appearance: checkbox;
+            appearance: checkbox;
+        }
 
         .btn {
             padding: 12px 24px;
@@ -3548,15 +3643,26 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
 
             /* Checkboxes - larger touch targets */
             .checkbox-item {
-                padding: 15px;
-                margin-bottom: 8px;
+                padding: 16px;
+                margin-bottom: 10px;
+                min-height: 56px;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
             }
 
             .checkbox-item input[type="checkbox"],
             .checkbox-item input[type="radio"] {
-                width: 20px;
-                height: 20px;
-                margin-right: 12px;
+                width: 24px;
+                height: 24px;
+                min-width: 24px;
+                min-height: 24px;
+                margin: 0;
+                -webkit-appearance: checkbox;
+                appearance: checkbox;
+            }
+
+            .checkbox-item label {
+                padding-left: 12px;
             }
 
             /* Buttons - full width and larger */
@@ -3766,7 +3872,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         }
 
         /* ===== MOBILE RESPONSIVE STYLES ===== */
-        
+
         /* Burger Menu Navigation */
         .mobile-menu-toggle {
             display: none;
@@ -3783,7 +3889,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             touch-action: manipulation;
             -webkit-appearance: none;
         }
-        
+
         .mobile-menu-toggle span {
             display: block;
             height: 3px;
@@ -3792,19 +3898,19 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             border-radius: 1px;
             transition: all 0.3s ease;
         }
-        
+
         .mobile-menu-toggle.active span:nth-child(1) {
             transform: rotate(45deg) translate(5px, 5px);
         }
-        
+
         .mobile-menu-toggle.active span:nth-child(2) {
             opacity: 0;
         }
-        
+
         .mobile-menu-toggle.active span:nth-child(3) {
             transform: rotate(-45deg) translate(7px, -6px);
         }
-        
+
         .mobile-menu-overlay {
             display: none;
             position: fixed;
@@ -3818,12 +3924,12 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             transition: opacity 0.3s ease;
             pointer-events: none;
         }
-        
+
         .mobile-menu-overlay.active {
             opacity: 1 !important;
             pointer-events: auto;
         }
-        
+
         .mobile-menu {
             display: none;
             position: fixed;
@@ -3839,12 +3945,12 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             padding: 20px 0;
             pointer-events: none;
         }
-        
+
         .mobile-menu.active {
             right: 0 !important;
             pointer-events: auto;
         }
-        
+
         .mobile-menu-header {
             display: flex;
             justify-content: flex-end;
@@ -3852,7 +3958,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             padding: 15px 20px 15px;
             border-bottom: 1px solid #e5e7eb;
         }
-        
+
         .mobile-menu-close {
             background: none;
             border: none;
@@ -3867,11 +3973,11 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             touch-action: manipulation;
             -webkit-appearance: none;
         }
-        
+
         .mobile-menu-tabs {
             padding: 20px 0;
         }
-        
+
         .mobile-menu-tab {
             display: block;
             width: 100%;
@@ -3888,27 +3994,27 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             touch-action: manipulation;
             -webkit-appearance: none;
         }
-        
+
         .mobile-menu-tab:hover {
             background: #f9fafb;
             color: #3b82f6;
         }
-        
+
         .mobile-menu-tab.active {
             background: #eff6ff;
             color: #3b82f6;
             border-left: 4px solid #3b82f6;
         }
-        
+
         /* Mobile Card Layout - Controlled by media queries */
-        
+
         /* Desktop: Hide cards container, show table */
         @media (min-width: 769px) {
             #clientCardsContainer {
                 display: none !important;
             }
         }
-        
+
         .client-card {
             display: block;
             background: white;
@@ -3918,7 +4024,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             overflow: hidden;
             transition: all 0.3s ease;
         }
-        
+
         .client-card-header {
             padding: 15px;
             cursor: pointer;
@@ -3928,59 +4034,59 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             align-items: center;
             user-select: none;
         }
-        
+
         .client-card-header:hover {
             background: #f8fafc;
         }
-        
+
         .client-card-main {
             display: flex;
             flex-direction: column;
             gap: 5px;
             flex: 1;
         }
-        
+
         .client-card-name {
             font-weight: bold;
             font-size: 16px;
             color: #1e293b;
         }
-        
+
         .client-card-matter {
             font-size: 14px;
             color: #64748b;
         }
-        
+
         .client-card-status-row {
             display: flex;
             align-items: center;
             gap: 10px;
             margin-top: 5px;
         }
-        
+
         .client-card-expand {
             color: #64748b;
             font-size: 18px;
             transition: transform 0.3s ease;
             margin-left: 10px;
         }
-        
+
         .client-card.expanded .client-card-expand {
             transform: rotate(180deg);
         }
-        
+
         .client-card-details {
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease;
             padding: 0 15px;
         }
-        
+
         .client-card.expanded .client-card-details {
             max-height: 500px;
             padding: 0 15px 15px;
         }
-        
+
         .client-card-row {
             display: flex;
             justify-content: space-between;
@@ -3988,17 +4094,17 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             padding: 8px 0;
             border-bottom: 1px solid #f1f5f9;
         }
-        
+
         .client-card-row:last-child {
             border-bottom: none;
         }
-        
+
         .client-card-label {
             font-weight: 600;
             color: #475569;
             min-width: 80px;
         }
-        
+
         .client-card-value {
             color: #1e293b;
             text-align: right;
@@ -4006,40 +4112,40 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             margin-left: 10px;
             word-wrap: break-word;
         }
-        
+
         .client-card-charges {
             padding: 10px 0;
             border-bottom: 1px solid #f1f5f9;
         }
-        
+
         .client-card-charges strong {
             color: #475569;
             display: block;
             margin-bottom: 5px;
         }
-        
+
         .client-card-letters {
             padding: 10px 0;
             border-bottom: 1px solid #f1f5f9;
         }
-        
+
         .client-card-letters strong {
             color: #475569;
             display: block;
             margin-bottom: 8px;
         }
-        
+
         .client-card-letter-status {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             font-size: 14px;
         }
-        
+
         .client-card-actions {
             padding: 15px 0 5px;
         }
-        
+
         .client-card-btn {
             width: 100%;
             padding: 12px;
@@ -4054,72 +4160,72 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             touch-action: manipulation;
             -webkit-appearance: none;
         }
-        
+
         .client-card-btn:hover {
             background: #2563eb;
             transform: translateY(-1px);
         }
-        
+
         /* Desktop/Mobile Breakpoints */
         @media (max-width: 768px) {
             /* Hide desktop navigation */
             .tabs {
                 display: none;
             }
-            
+
             /* Show mobile menu elements */
             .mobile-menu-toggle {
                 display: flex;
             }
-            
+
             .mobile-menu-overlay {
                 display: block;
             }
-            
+
             .mobile-menu {
                 display: block;
             }
-            
+
             /* Header adjustments */
             .header {
                 position: relative;
                 padding: 20px;
             }
-            
+
             .mobile-menu-toggle {
                 position: absolute;
                 top: 20px;
                 right: 20px;
             }
-            
+
             /* Hide desktop table */
             .master-table {
                 display: none !important;
             }
-            
+
             /* Show mobile cards */
             #clientCardsContainer {
                 display: block !important;
             }
-            
+
             /* Container adjustments */
             .container {
                 padding: 0 10px;
             }
-            
+
             body {
                 padding: 10px;
             }
-            
+
             .tab-content {
                 padding: 20px 15px;
             }
-            
+
             /* Form adjustments */
             .form-group {
                 margin-bottom: 15px;
             }
-            
+
             /* Mobile form input fixes */
             .form-group select,
             .form-group input,
@@ -4131,7 +4237,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 transform: translateZ(0);
                 -webkit-transform: translateZ(0);
             }
-            
+
             /* iOS checkbox and radio fixes */
             input[type="checkbox"],
             input[type="radio"] {
@@ -4139,7 +4245,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 touch-action: manipulation;
                 transform: translateZ(0);
             }
-            
+
             .btn {
                 padding: 12px 16px;
                 font-size: 16px;
@@ -4150,39 +4256,43 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 transform: translateZ(0);
                 -webkit-transform: translateZ(0);
             }
-            
+
             /* Responsive button layout */
             .form-actions {
                 display: flex;
                 flex-direction: column;
                 gap: 10px;
             }
-            
+
             .form-actions .btn {
                 width: 100%;
                 margin-right: 0;
             }
-            
+
             /* Checkbox groups responsive */
             .checkbox-group {
                 grid-template-columns: 1fr;
             }
-            
+
             /* Enhanced mobile interaction fixes */
             .checkbox-item {
                 touch-action: manipulation;
                 -webkit-touch-callout: none;
                 -webkit-user-select: none;
                 user-select: none;
+                position: relative;
+                -webkit-tap-highlight-color: transparent;
             }
-            
+
             .checkbox-item input[type="checkbox"],
             .checkbox-item input[type="radio"] {
-                min-width: 20px;
-                min-height: 20px;
+                min-width: 24px;
+                min-height: 24px;
                 cursor: pointer;
+                position: relative;
+                z-index: 2;
             }
-            
+
             /* Status badges and interactive elements */
             .status-badge,
             .client-card-btn,
@@ -4194,42 +4304,42 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 transform: translateZ(0);
                 -webkit-transform: translateZ(0);
             }
-            
+
             /* File input and special buttons */
             input[type="file"],
             button[onclick] {
                 touch-action: manipulation;
                 -webkit-appearance: none;
             }
-            
+
             /* Mobile analytics cards */
             .analytics-grid {
                 grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
                 gap: 15px;
             }
-            
+
             /* Global mobile interaction fixes */
             * {
                 -webkit-tap-highlight-color: rgba(0,0,0,0);
                 -webkit-touch-callout: none;
             }
-            
+
             /* Ensure all clickable elements are responsive */
             button, input, select, textarea, [onclick], [onchange] {
                 touch-action: manipulation !important;
                 -webkit-user-select: none;
                 user-select: none;
             }
-            
+
             /* Specifically target form elements */
             input, select, textarea {
                 -webkit-user-select: text;
                 user-select: text;
             }
-            
+
             /* Prevent zoom on input focus */
             input[type="text"],
-            input[type="email"], 
+            input[type="email"],
             input[type="number"],
             input[type="tel"],
             input[type="date"],
@@ -4239,44 +4349,44 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 font-size: 16px !important;
             }
         }
-        
+
         /* Tablet specific adjustments */
         @media (min-width: 431px) and (max-width: 768px) {
             #clientCardsContainer .client-card {
                 margin: 8px 0;
             }
-            
+
             .client-card-header {
                 padding: 18px;
             }
-            
+
             .analytics-grid {
                 grid-template-columns: repeat(2, 1fr) !important;
             }
         }
-        
+
         /* Small mobile devices */
         @media (max-width: 430px) {
             .mobile-menu {
                 width: 80vw;
             }
-            
+
             .header {
                 padding: 15px;
             }
-            
+
             .tab-content {
                 padding: 15px 10px;
             }
-            
+
             .client-card-header {
                 padding: 12px;
             }
-            
+
             .client-card-name {
                 font-size: 15px;
             }
-            
+
             .client-card-matter {
                 font-size: 13px;
             }
@@ -4308,7 +4418,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
 
         <!-- Mobile Menu Overlay -->
         <div class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
-        
+
         <!-- Mobile Menu -->
         <div class="mobile-menu">
             <div class="mobile-menu-header">
@@ -4571,23 +4681,23 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 <div class="form-group">
                     <label>Allocate To:</label>
                     <div class="checkbox-group">
-                        <div class="checkbox-item">
+                        <div class="checkbox-item" data-checkbox="allocate_AAG">
                             <input type="checkbox" id="allocate_AAG" value="AAG">
                             <label for="allocate_AAG">AAG</label>
                         </div>
-                        <div class="checkbox-item">
+                        <div class="checkbox-item" data-checkbox="allocate_RHH">
                             <input type="checkbox" id="allocate_RHH" value="RHH">
                             <label for="allocate_RHH">RHH</label>
                         </div>
-                        <div class="checkbox-item">
+                        <div class="checkbox-item" data-checkbox="allocate_SRS">
                             <input type="checkbox" id="allocate_SRS" value="SRS">
                             <label for="allocate_SRS">SRS</label>
                         </div>
-                        <div class="checkbox-item">
+                        <div class="checkbox-item" data-checkbox="allocate_BJB">
                             <input type="checkbox" id="allocate_BJB" value="BJB">
                             <label for="allocate_BJB">BJB</label>
                         </div>
-                        <div class="checkbox-item">
+                        <div class="checkbox-item" data-checkbox="allocate_NKM">
                             <input type="checkbox" id="allocate_NKM" value="NKM">
                             <label for="allocate_NKM">NKM</label>
                         </div>
