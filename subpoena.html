@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Subpoena Generation System</title>
-    
+
     <script>
         // ===== GLOBAL STATE =====
         let currentClientData = null;
@@ -16,29 +16,6 @@
             return new Date(dateString).toLocaleDateString('en-AU', {
                 day: 'numeric', month: 'long', year: 'numeric'
             });
-        };
-
-        // Convert "Surname, First Name Middle Name" to "First Name Middle Name Surname"
-        const convertNameFormat = (name) => {
-            if (!name || typeof name !== 'string') return name || '';
-            
-            // Trim whitespace
-            name = name.trim();
-            
-            // Check if name contains a comma (Excel format)
-            if (name.includes(',')) {
-                const parts = name.split(',');
-                if (parts.length >= 2) {
-                    const surname = parts[0].trim();
-                    const firstAndMiddle = parts[1].trim();
-                    
-                    // Return in "First Middle Surname" format
-                    return `${firstAndMiddle} ${surname}`;
-                }
-            }
-            
-            // If no comma, assume it's already in correct format
-            return name;
         };
 
         const formatDateForSubpoena = (dateString) => {
@@ -67,22 +44,19 @@
             const clientName = urlParams.get('clientName');
             const matterNumber = urlParams.get('matterNumber');
             const court = urlParams.get('court');
-            
+
             if (clientName) {
-                const convertedName = convertNameFormat(clientName);
-                document.getElementById('clientName').value = convertedName;
-                currentClientData = { name: convertedName, matterNumber, court };
+                document.getElementById('clientName').value = clientName;
+                currentClientData = { name: clientName, matterNumber, court };
                 displayClientInfo();
             }
-            
+
             // Check localStorage as fallback
             if (!clientName) {
                 const storedClient = localStorage.getItem('selectedClient');
                 if (storedClient) {
                     currentClientData = JSON.parse(storedClient);
-                    const convertedName = convertNameFormat(currentClientData.name || '');
-                    document.getElementById('clientName').value = convertedName;
-                    currentClientData.name = convertedName; // Update stored data with converted name
+                    document.getElementById('clientName').value = currentClientData.name || '';
                     displayClientInfo();
                 }
             }
@@ -119,44 +93,44 @@
             const returnDate = document.getElementById('returnDate').value;
             const complianceDate = document.getElementById('complianceDate').value;
             const warningDiv = document.getElementById('dateWarning');
-            
+
             if (!returnDate || !complianceDate) {
                 warningDiv.style.display = 'none';
                 return true;
             }
-            
+
             const today = new Date();
             const returnDateObj = new Date(returnDate);
             const complianceDateObj = new Date(complianceDate);
-            
+
             let warnings = [];
-            
+
             // Check if dates are in the future
             if (returnDateObj <= today) {
                 warnings.push('Return date must be in the future');
             }
-            
+
             if (complianceDateObj <= today) {
                 warnings.push('Compliance date must be in the future');
             }
-            
+
             // Check if compliance date is before return date
             if (complianceDateObj > returnDateObj) {
                 warnings.push('Compliance date must be before or on the return date');
             }
-            
+
             // Check if less than 7 days notice
             const daysNotice = Math.ceil((complianceDateObj - today) / (1000 * 60 * 60 * 24));
             if (daysNotice < 7 && daysNotice > 0) {
                 warnings.push(`Warning: Only ${daysNotice} days notice given (minimum 7 days recommended)`);
             }
-            
+
             if (warnings.length > 0) {
                 warningDiv.style.display = 'block';
                 warningDiv.innerHTML = warnings.join('<br>');
                 return warnings.length === 1 && warnings[0].includes('Warning:');
             }
-            
+
             warningDiv.style.display = 'none';
             return true;
         };
@@ -167,7 +141,7 @@
                 alert('Please correct the date issues before generating the subpoena');
                 return;
             }
-            
+
             const formData = {
                 recipientName: document.getElementById('recipientName').value,
                 recipientAddress: document.getElementById('recipientAddress').value,
@@ -182,26 +156,26 @@
                 documentsSought: document.getElementById('documentsSought').value,
                 solicitor: document.getElementById('solicitor').value
             };
-            
+
             // Validate required fields
-            const requiredFields = ['recipientName', 'recipientAddress', 'courtLevel', 'courtLocation', 
-                                   'returnDate', 'complianceDate', 'clientName', 'proceedingsNumber', 'issuedFor', 
+            const requiredFields = ['recipientName', 'recipientAddress', 'courtLevel', 'courtLocation',
+                                   'returnDate', 'complianceDate', 'clientName', 'proceedingsNumber', 'issuedFor',
                                    'documentsSought', 'solicitor'];
-            
+
             for (const field of requiredFields) {
                 if (!formData[field]) {
                     alert(`Please fill in all required fields. Missing: ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
                     return;
                 }
             }
-            
+
             currentSubpoenaData = formData;
-            
+
             const prompt = formatSubpoenaPrompt(formData);
             const outputDiv = document.getElementById('subpoenaOutput');
             outputDiv.textContent = prompt;
             outputDiv.style.display = 'block';
-            
+
             // Enable action buttons
             document.getElementById('copyBtn').disabled = false;
             document.getElementById('zapierBtn').disabled = false;
@@ -215,7 +189,7 @@
                 'SRS': 'Sophia Seton',
                 'NKM': 'Natalie McDonald'
             };
-            
+
             return `SUBPOENA GENERATION REQUEST
 
 COURT DETAILS:
@@ -258,12 +232,12 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 alert('Please generate a subpoena first');
                 return;
             }
-            
+
             const statusDiv = document.getElementById('zapierStatus');
             statusDiv.style.display = 'block';
             statusDiv.className = 'status-message status-sending';
             statusDiv.textContent = 'Sending to Zapier...';
-            
+
             const payload = {
                 type: 'SUBPOENA',
                 subpoenaData: {
@@ -278,10 +252,10 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                     }
                 }
             };
-            
+
             const formData = new FormData();
             formData.append('data', JSON.stringify(payload));
-            
+
             fetch('https://hooks.zapier.com/hooks/catch/19713185/u47xnci/', {
                 method: 'POST',
                 body: formData
@@ -309,7 +283,7 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 alert('Please generate a subpoena first');
                 return;
             }
-            
+
             navigator.clipboard.writeText(outputText).then(() => {
                 const btn = document.getElementById('copyBtn');
                 const originalText = btn.textContent;
@@ -335,7 +309,7 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 document.getElementById('copyBtn').disabled = true;
                 document.getElementById('zapierBtn').disabled = true;
                 currentSubpoenaData = null;
-                
+
                 // Reset organization fields to manual entry state
                 const recipientName = document.getElementById('recipientName');
                 const recipientAddress = document.getElementById('recipientAddress');
@@ -343,7 +317,7 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 recipientAddress.readOnly = false;
                 recipientName.style.backgroundColor = '';
                 recipientAddress.style.backgroundColor = '';
-                
+
                 // Reload client data if available
                 loadClientFromMain();
             }
@@ -352,16 +326,16 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
         const populateCommonCourts = () => {
             const courtLocation = document.getElementById('courtLocation');
             const courtLevel = document.getElementById('courtLevel').value;
-            
+
             const commonCourts = {
                 'Local Court': ['Campbelltown', 'Sydney Downing Centre', 'Parramatta', 'Liverpool', 'Penrith', 'Camden', 'Picton', 'Moss Vale'],
                 'District Court': ['Sydney Downing Centre', 'Parramatta', 'Campbelltown', 'Penrith'],
                 'Supreme Court': ['Sydney', 'Parramatta']
             };
-            
+
             if (courtLevel && commonCourts[courtLevel]) {
                 const datalist = document.getElementById('courtLocations');
-                datalist.innerHTML = commonCourts[courtLevel].map(court => 
+                datalist.innerHTML = commonCourts[courtLevel].map(court =>
                     `<option value="${court}">`
                 ).join('');
             }
@@ -371,15 +345,15 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
             const organizationType = document.getElementById('organizationType').value;
             const recipientName = document.getElementById('recipientName');
             const recipientAddress = document.getElementById('recipientAddress');
-            
+
             if (organizationType === 'NSW Police') {
                 recipientName.value = 'Commissioner of NSW Police';
                 recipientAddress.value = 'NSW Police Force, Infolink Unit\nLocked Bag 5102\nParramatta, NSW 2124';
-                
+
                 // Make fields read-only when NSW Police is selected
                 recipientName.readOnly = true;
                 recipientAddress.readOnly = true;
-                
+
                 // Add visual indication
                 recipientName.style.backgroundColor = '#f9fafb';
                 recipientAddress.style.backgroundColor = '#f9fafb';
@@ -389,7 +363,7 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 recipientAddress.value = '';
                 recipientName.readOnly = false;
                 recipientAddress.readOnly = false;
-                
+
                 // Remove visual indication
                 recipientName.style.backgroundColor = '';
                 recipientAddress.style.backgroundColor = '';
@@ -403,24 +377,24 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
         // ===== INITIALIZATION =====
         document.addEventListener('DOMContentLoaded', () => {
             loadClientFromMain();
-            
+
             // Set default dates
             const today = getTodayDate();
             document.getElementById('returnDate').min = today;
             document.getElementById('complianceDate').min = today;
-            
+
             // Set default return date to 14 days from now
             document.getElementById('returnDate').value = addDays(today, 14);
             // Set default compliance date to 7 days from now
             document.getElementById('complianceDate').value = addDays(today, 7);
-            
+
             // Add event listeners
             document.getElementById('returnDate').addEventListener('change', validateSubpoenaDates);
             document.getElementById('complianceDate').addEventListener('change', validateSubpoenaDates);
             document.getElementById('courtLevel').addEventListener('change', populateCommonCourts);
         });
     </script>
-    
+
     <style>
         * {
             margin: 0;
@@ -818,7 +792,7 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 <!-- Recipient Details Section -->
                 <div class="form-section">
                     <h2 class="section-title">Recipient Details</h2>
-                    
+
                     <div class="form-group">
                         <label for="organizationType">
                             Organization Type
@@ -848,7 +822,7 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 <!-- Court Information Section -->
                 <div class="form-section">
                     <h2 class="section-title">Court Information</h2>
-                    
+
                     <div class="form-group">
                         <label for="courtLevel">
                             Court Level <span class="required">*</span>
@@ -890,7 +864,7 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 <!-- Case Details Section -->
                 <div class="form-section">
                     <h2 class="section-title">Case Details</h2>
-                    
+
                     <div class="form-group">
                         <label for="partyType">
                             Party Type <span class="required">*</span>
@@ -936,7 +910,7 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 <!-- Documents Sought Section -->
                 <div class="form-section">
                     <h2 class="section-title">Documents Sought</h2>
-                    
+
                     <div class="form-group">
                         <label for="documentsSought">
                             Description of Documents Required <span class="required">*</span>
@@ -949,7 +923,7 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
                 <!-- Contact Information Section -->
                 <div class="form-section">
                     <h2 class="section-title">Contact Information</h2>
-                    
+
                     <div class="form-group">
                         <label for="solicitor">
                             Solicitor Name <span class="required">*</span>
@@ -984,7 +958,7 @@ The subpoena should be ready for review and filing with the appropriate NSW cour
 
             <!-- Output Display -->
             <div id="subpoenaOutput" class="output-box"></div>
-            
+
             <!-- Status Messages -->
             <div id="zapierStatus" class="status-message"></div>
         </div>
