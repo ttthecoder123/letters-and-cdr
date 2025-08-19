@@ -1,0 +1,128 @@
+<h2>Court Diary Request (CDR)</h2>
+<p>Generate CDR for court appearances</p>
+
+<div class="form-group">
+    <label for="cdrClientSelect">Select Client (Optional):</label>
+    <select id="cdrClientSelect" onchange="loadCDRClientInfo()">
+        <option value="">-- Manual Entry --</option>
+    </select>
+</div>
+
+<div class="section">
+    <div class="section-title">Court Outcome</div>
+    <div class="form-group">
+        <label for="cdrOutcomeCourt">Court:</label>
+        <input type="text" id="cdrOutcomeCourt" placeholder="Enter court name">
+    </div>
+    <div class="form-group">
+        <label for="cdrOutcomeDate">Date:</label>
+        <input type="date" id="cdrOutcomeDate">
+    </div>
+    <div class="form-group">
+        <label for="cdrStartTime">Start Time:</label>
+        <input type="time" id="cdrStartTime" value="09:30">
+    </div>
+    <div class="form-group">
+        <label for="cdrFinishTime">Finish Time:</label>
+        <input type="time" id="cdrFinishTime" value="10:00">
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Court Diary Request</div>
+    <div class="form-group">
+        <label for="cdrCourtDate">Court Date:</label>
+        <input type="date" id="cdrCourtDate">
+    </div>
+    <div class="form-group">
+        <label for="cdrSolicitor">Solicitor:</label>
+        <select id="cdrSolicitor">
+            <option value="AAG" selected>AAG</option>
+            <option value="RHH">RHH</option>
+            <option value="SRS">SRS</option>
+            <option value="BJB">BJB</option>
+            <option value="NKM">NKM</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="cdrClientName">Client Name:</label>
+        <input type="text" id="cdrClientName" placeholder="Enter client name">
+    </div>
+    <div class="form-group">
+        <label for="cdrFileNumber">File Number:</label>
+        <input type="text" id="cdrFileNumber" placeholder="Enter file number">
+    </div>
+    <div class="form-group">
+        <label for="cdrReason">Reason:</label>
+        <select id="cdrReason">
+            <option value="">-- Select Reason --</option>
+            <option value="Mention">Mention</option>
+            <option value="Mention (Brief Reply)">Mention (Brief Reply)</option>
+            <option value="Sentence">Sentence</option>
+            <option value="Hearing">Hearing</option>
+            <option value="Compliance Mention">Compliance Mention</option>
+            <option value="Brief Status">Brief Status</option>
+            <option value="Charge Certification">Charge Certification</option>
+            <option value="Committal">Committal</option>
+            <option value="Arraignment">Arraignment</option>
+            <option value="Return of Subpoena">Return of Subpoena</option>
+            <option value="Section 14 Application">Section 14 Application</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="cdrAdditionalDates">Additional Dates to Note:</label>
+        <textarea id="cdrAdditionalDates" placeholder="Enter any additional dates that should be noted (e.g., conference dates, filing deadlines)"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="cdrCourt">Court:</label>
+        <input type="text" id="cdrCourt" placeholder="Enter court name">
+    </div>
+    <div class="form-group">
+        <label for="cdrCourtTime">Court Time:</label>
+        <input type="time" id="cdrCourtTime" value="09:30">
+    </div>
+    <div class="form-group">
+        <label>Allocate To:</label>
+        <div class="checkbox-group">
+            <div class="checkbox-item" data-checkbox="allocate_AAG">
+                <input type="checkbox" id="allocate_AAG" value="AAG">
+                <label for="allocate_AAG">AAG</label>
+            </div>
+            <div class="checkbox-item" data-checkbox="allocate_RHH">
+                <input type="checkbox" id="allocate_RHH" value="RHH">
+                <label for="allocate_RHH">RHH</label>
+            </div>
+            <div class="checkbox-item" data-checkbox="allocate_SRS">
+                <input type="checkbox" id="allocate_SRS" value="SRS">
+                <label for="allocate_SRS">SRS</label>
+            </div>
+            <div class="checkbox-item" data-checkbox="allocate_BJB">
+                <input type="checkbox" id="allocate_BJB" value="BJB">
+                <label for="allocate_BJB">BJB</label>
+            </div>
+            <div class="checkbox-item" data-checkbox="allocate_NKM">
+                <input type="checkbox" id="allocate_NKM" value="NKM">
+                <label for="allocate_NKM">NKM</label>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="checkbox-item">
+            <input type="checkbox" id="cdrClientExcused">
+            <label for="cdrClientExcused">Client Excused</label>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="cdrFeeReminder">Fee Reminder:</label>
+        <input type="text" id="cdrFeeReminder" placeholder="Enter fee reminder details">
+    </div>
+</div>
+
+<div class="form-actions" style="margin-top: 30px;">
+    <button class="btn btn-primary" onclick="generateCDR()">Generate CDR</button>
+    <button class="btn btn-success" onclick="sendCDRToZapier()">Send CDR to Zapier</button>
+    <button class="btn btn-secondary" onclick="clearCDRForm()">Clear Form</button>
+</div>
+
+<div id="cdrOutput" class="output-box" style="display: none;"></div>
+<div id="cdrZapierStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>

@@ -1,0 +1,309 @@
+<h2>Generate File Note</h2>
+<p>Create formal documentation of client interactions and court appearances</p>
+
+<!-- Note Type Selection -->
+<div class="section">
+    <div class="section-title">Note Type</div>
+    <div class="radio-group">
+        <div class="radio-item">
+            <input type="radio" id="noteTypeGeneral" name="noteType" value="general" checked onchange="toggleFileNoteType()">
+            <label for="noteTypeGeneral">General Meeting/Conference</label>
+        </div>
+        <div class="radio-item">
+            <input type="radio" id="noteTypeCourt" name="noteType" value="court" onchange="toggleFileNoteType()">
+            <label for="noteTypeCourt">Court Appearance</label>
+        </div>
+        <div class="radio-item">
+            <input type="radio" id="noteTypeEmail" name="noteType" value="email" onchange="toggleFileNoteType()">
+            <label for="noteTypeEmail">Email/Correspondence</label>
+        </div>
+    </div>
+</div>
+
+<!-- Client Information Section -->
+<div class="section">
+    <div class="section-title">Client Information</div>
+    <div class="radio-group">
+        <div class="radio-item">
+            <input type="radio" id="fileNoteClientDatabase" name="fileNoteClientSource" value="database" checked onchange="toggleFileNoteClientSelection()">
+            <label for="fileNoteClientDatabase">Select from Database</label>
+        </div>
+        <div class="radio-item">
+            <input type="radio" id="fileNoteClientManual" name="fileNoteClientSource" value="manual" onchange="toggleFileNoteClientSelection()">
+            <label for="fileNoteClientManual">Manual Entry</label>
+        </div>
+    </div>
+
+    <div id="fileNoteDatabaseSelection" style="margin-top: 15px;">
+        <div class="form-group">
+            <label for="fileNoteClientSelect">Select Client:</label>
+            <select id="fileNoteClientSelect" onchange="loadFileNoteClientInfo()">
+                <option value="">-- Select a Client --</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="fileNoteManualEntry" style="display: none; margin-top: 15px;">
+        <div class="form-group">
+            <label for="fileNoteManualName">Client Name:</label>
+            <input type="text" id="fileNoteManualName">
+        </div>
+        <div class="form-group">
+            <label for="fileNoteManualMatter">Matter Reference:</label>
+            <input type="text" id="fileNoteManualMatter">
+        </div>
+        <div class="form-group">
+            <label for="fileNoteManualCourt">Court:</label>
+            <input type="text" id="fileNoteManualCourt">
+        </div>
+        <div class="form-group">
+            <label for="fileNoteManualCharges">Charges:</label>
+            <input type="text" id="fileNoteManualCharges">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="fileNoteDate">Date:</label>
+        <input type="date" id="fileNoteDate">
+    </div>
+    <div class="form-group">
+        <label for="fileNoteStartTime">Start Time:</label>
+        <input type="time" id="fileNoteStartTime">
+    </div>
+    <div class="form-group">
+        <label for="fileNoteEndTime">End Time:</label>
+        <input type="time" id="fileNoteEndTime">
+    </div>
+</div>
+
+<!-- General Meeting Section -->
+<div id="fileNoteGeneralSection" class="section">
+    <div class="section-title">Meeting Details</div>
+    <div class="form-group">
+        <label for="contactType">Contact Type:</label>
+        <select id="contactType">
+            <option value="">-- Select Type --</option>
+            <option value="Phone">Phone</option>
+            <option value="Office">Office Meeting</option>
+            <option value="Video">Video Conference</option>
+            <option value="Home Visit">Home Visit</option>
+            <option value="Custody Visit">Custody Visit</option>
+            <option value="Hospital Visit">Hospital Visit</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="whoPresent">Who was Present:</label>
+        <input type="text" id="whoPresent" placeholder="e.g., Client, Support Person, Interpreter">
+    </div>
+    <div class="form-group">
+        <label for="meetingPurpose">Purpose:</label>
+        <input type="text" id="meetingPurpose" placeholder="e.g., Initial conference, Pre-trial conference">
+    </div>
+    <div class="form-group">
+        <label for="discussion">Discussion:</label>
+        <textarea id="discussion" rows="4" placeholder="Summary of what was discussed"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="clientInstructions">Client Instructions:</label>
+        <textarea id="clientInstructions" rows="3" placeholder="Instructions received from client"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="documentsHandled">Documents Handled:</label>
+        <input type="text" id="documentsHandled" placeholder="e.g., Brief of evidence provided, Forms signed">
+    </div>
+    <div class="form-group">
+        <label for="nextSteps">Next Steps:</label>
+        <textarea id="nextSteps" rows="3" placeholder="Actions to be taken"></textarea>
+    </div>
+    <div class="form-group">
+        <label>Follow-up Required:</label>
+        <div class="radio-group">
+            <div class="radio-item">
+                <input type="radio" id="followUpYes" name="followUp" value="yes" onchange="toggleFollowUpDetails()">
+                <label for="followUpYes">Yes</label>
+            </div>
+            <div class="radio-item">
+                <input type="radio" id="followUpNo" name="followUp" value="no" checked onchange="toggleFollowUpDetails()">
+                <label for="followUpNo">No</label>
+            </div>
+        </div>
+        <div id="followUpDetails" style="display: none; margin-top: 10px;">
+            <input type="text" id="followUpText" placeholder="Describe follow-up required">
+        </div>
+    </div>
+</div>
+
+<!-- Court Appearance Section -->
+<div id="fileNoteCourtSection" class="section" style="display: none;">
+    <div class="section-title">Court Appearance Details</div>
+    <div class="form-group">
+        <label for="courtLocation">Court:</label>
+        <input type="text" id="courtLocation" placeholder="Will auto-populate if client selected">
+    </div>
+    <div class="form-group">
+        <label for="listedFor">Listed For:</label>
+        <select id="listedFor">
+            <option value="">-- Select --</option>
+            <option value="Mention">Mention</option>
+            <option value="Mention (Brief Reply)">Mention (Brief Reply)</option>
+            <option value="Sentence">Sentence</option>
+            <option value="Hearing">Hearing</option>
+            <option value="Trial">Trial</option>
+            <option value="Compliance Mention">Compliance Mention</option>
+            <option value="Brief Status">Brief Status</option>
+            <option value="Charge Certification">Charge Certification</option>
+            <option value="Committal">Committal</option>
+            <option value="Arraignment">Arraignment</option>
+            <option value="Return of Subpoena">Return of Subpoena</option>
+            <option value="Section 14 Application">Section 14 Application</option>
+            <option value="Bail Application">Bail Application</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="whoAppeared">Who Appeared:</label>
+        <select id="whoAppearedFileNote">
+            <option value="">-- Select --</option>
+            <option value="Solicitor">Solicitor</option>
+            <option value="Barrister">Barrister</option>
+            <option value="Both Solicitor and Barrister">Both Solicitor and Barrister</option>
+            <option value="Client self-represented">Client self-represented</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Client Attendance:</label>
+        <div class="radio-group">
+            <div class="radio-item">
+                <input type="radio" id="clientAttended" name="clientAttendance" value="attended">
+                <label for="clientAttended">Attended</label>
+            </div>
+            <div class="radio-item">
+                <input type="radio" id="clientExcused" name="clientAttendance" value="excused">
+                <label for="clientExcused">Excused</label>
+            </div>
+            <div class="radio-item">
+                <input type="radio" id="clientAVL" name="clientAttendance" value="avl">
+                <label for="clientAVL">Via AVL</label>
+            </div>
+        </div>
+    </div>
+    <div class="checkbox-item">
+        <input type="checkbox" id="multipleMatters" onchange="toggleMultipleMatters()">
+        <label for="multipleMatters">Multiple Matters</label>
+    </div>
+    <div id="multipleMattersSection" style="display: none; margin-top: 15px;">
+        <div class="form-group">
+            <label for="numberOfMatters">Number of Matters:</label>
+            <input type="number" id="numberOfMatters" min="2" max="10" value="2" onchange="updateMultipleMatterFields()">
+        </div>
+        <div id="multipleMatterFields">
+            <!-- Dynamic matter fields will be inserted here -->
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="whatOccurredFileNote">What Occurred:</label>
+        <textarea id="whatOccurredFileNote" rows="4"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="prosecutionPosition">Prosecution Position:</label>
+        <input type="text" id="prosecutionPosition">
+    </div>
+    <div class="form-group">
+        <label for="courtOutcome">Outcome:</label>
+        <textarea id="courtOutcome" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="nextCourtDateFileNote">Next Court Date (if applicable):</label>
+        <input type="date" id="nextCourtDateFileNote">
+    </div>
+    <div class="form-group">
+        <label>Instructions Confirmed:</label>
+        <div class="radio-group">
+            <div class="radio-item">
+                <input type="radio" id="instructionsYes" name="instructionsConfirmed" value="yes">
+                <label for="instructionsYes">Yes</label>
+            </div>
+            <div class="radio-item">
+                <input type="radio" id="instructionsNo" name="instructionsConfirmed" value="no">
+                <label for="instructionsNo">No</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email/Correspondence Section -->
+<div id="fileNoteEmailSection" class="section" style="display: none;">
+    <div class="section-title">Email/Correspondence Details</div>
+    <div class="form-group">
+        <label>Direction:</label>
+        <div class="radio-group">
+            <div class="radio-item">
+                <input type="radio" id="emailSent" name="emailDirection" value="sent">
+                <label for="emailSent">Sent</label>
+            </div>
+            <div class="radio-item">
+                <input type="radio" id="emailReceived" name="emailDirection" value="received">
+                <label for="emailReceived">Received</label>
+            </div>
+            <div class="radio-item">
+                <input type="radio" id="emailExchange" name="emailDirection" value="exchange">
+                <label for="emailExchange">Exchange</label>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="otherParties">Other Parties:</label>
+        <input type="text" id="otherParties" placeholder="e.g., Prosecutor, Court, Client">
+    </div>
+    <div class="form-group">
+        <label for="subjectMatter">Subject Matter:</label>
+        <input type="text" id="subjectMatter">
+    </div>
+    <div class="form-group">
+        <label for="keyPoints">Key Points:</label>
+        <textarea id="keyPoints" rows="4"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="attachments">Attachments:</label>
+        <input type="text" id="attachments" placeholder="e.g., Brief of evidence, Medical reports">
+    </div>
+    <div class="form-group">
+        <label>Response Required:</label>
+        <div class="radio-group">
+            <div class="radio-item">
+                <input type="radio" id="responseYes" name="responseRequired" value="yes" onchange="toggleResponseDate()">
+                <label for="responseYes">Yes</label>
+            </div>
+            <div class="radio-item">
+                <input type="radio" id="responseNo" name="responseRequired" value="no" checked onchange="toggleResponseDate()">
+                <label for="responseNo">No</label>
+            </div>
+        </div>
+        <div id="responseDateSection" style="display: none; margin-top: 10px;">
+            <label for="responseDate">Response Due:</label>
+            <input type="date" id="responseDate">
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="actionRequired">Action Required:</label>
+        <input type="text" id="actionRequired">
+    </div>
+</div>
+
+<!-- Additional Options -->
+<div class="section">
+    <div class="checkbox-item">
+        <input type="checkbox" id="urgentFollowUp">
+        <label for="urgentFollowUp">Urgent Follow-up Required</label>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="form-actions" style="margin-top: 30px;">
+    <button class="btn btn-primary" onclick="generateFileNotePrompt()">Generate File Note Prompt</button>
+    <button class="btn btn-success" onclick="sendFileNoteToZapier()">Send to Zapier</button>
+    <button class="btn btn-success" onclick="copyFileNotePrompt()">Copy to Clipboard</button>
+    <button class="btn btn-secondary" onclick="clearFileNoteForm()">Clear Form</button>
+</div>
+
+<div id="fileNoteOutput" class="output-box" style="display: none; margin-top: 20px;"></div>
+<div id="fileNoteZapierStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
