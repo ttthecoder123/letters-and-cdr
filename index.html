@@ -24,6 +24,29 @@
 
         const getTodayDate = () => new Date().toISOString().split('T')[0];
 
+        // Convert "Surname, First Name Middle Name" to "First Name Middle Name Surname"
+        const convertNameFormat = (name) => {
+            if (!name || typeof name !== 'string') return name || '';
+            
+            // Trim whitespace
+            name = name.trim();
+            
+            // Check if name contains a comma (Excel format)
+            if (name.includes(',')) {
+                const parts = name.split(',');
+                if (parts.length >= 2) {
+                    const surname = parts[0].trim();
+                    const firstAndMiddle = parts[1].trim();
+                    
+                    // Return in "First Middle Surname" format
+                    return `${firstAndMiddle} ${surname}`;
+                }
+            }
+            
+            // If no comma, assume it's already in correct format
+            return name;
+        };
+
         const getTemplateFileName = (type) => ({
             'CCL': 'CCL_Template.docx',
             'Mention': 'Mention_Template.docx',
@@ -275,7 +298,7 @@
 
             const newClient = {
                 id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
-                name: document.getElementById('newClientName').value,
+                name: convertNameFormat(document.getElementById('newClientName').value),
                 address: document.getElementById('newClientAddress').value,
                 matterNumber: document.getElementById('newMatterNumber').value,
                 court: document.getElementById('newCourt').value,
@@ -785,7 +808,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
 
                     clients = jsonData.map((row, index) => ({
                         id: index + 1,
-                        name: row['Client Name'] || '',
+                        name: convertNameFormat(row['Client Name'] || ''),
                         address: row['Address'] || '',
                         matterNumber: row['Matter Reference'] || '',
                         court: row['Court'] || '',
@@ -808,7 +831,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         courtCalendarData = calendarData.map(row => ({
                             date: row['Date'],
                             endTime: row['End_Time'],
-                            clientName: row['Client_Name'] || '',
+                            clientName: convertNameFormat(row['Client_Name'] || ''),
                             matterType: row['Matter_Type'] || '',
                             matterNumber: row['Matter_Number'] || '',
                             court: row['Court'] || '',
