@@ -1,0 +1,652 @@
+/* MOBILE RESPONSIVE STYLES */
+
+/* Mobile Menu Navigation */
+.mobile-menu-toggle {
+    display: none;
+    width: 30px;
+    height: 30px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px 0;
+    position: relative;
+    z-index: 1001;
+    touch-action: manipulation;
+    -webkit-appearance: none;
+}
+
+.mobile-menu-toggle span {
+    display: block;
+    height: 3px;
+    width: 100%;
+    background: white;
+    border-radius: 1px;
+    transition: all 0.3s ease;
+}
+
+.mobile-menu-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+}
+
+.mobile-menu-toggle.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.mobile-menu-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -6px);
+}
+
+.mobile-menu-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.mobile-menu-overlay.active {
+    opacity: 1 !important;
+    pointer-events: auto;
+}
+
+.mobile-menu {
+    display: none;
+    position: fixed;
+    top: 0;
+    right: -250px;
+    width: min(250px, 70vw);
+    height: 100%;
+    background: white;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    transition: right 0.3s ease;
+    overflow-y: auto;
+    padding: 20px 0;
+    pointer-events: none;
+}
+
+.mobile-menu.active {
+    right: 0 !important;
+    pointer-events: auto;
+}
+
+.mobile-menu-header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 15px 20px 15px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.mobile-menu-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6b7280;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    -webkit-appearance: none;
+}
+
+.mobile-menu-tabs {
+    padding: 20px 0;
+}
+
+.mobile-menu-tab {
+    display: block;
+    width: 100%;
+    padding: 15px 20px;
+    background: none;
+    border: none;
+    text-align: left;
+    font-size: 16px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f3f4f6;
+    touch-action: manipulation;
+    -webkit-appearance: none;
+}
+
+.mobile-menu-tab:hover {
+    background: #f9fafb;
+    color: #3b82f6;
+}
+
+.mobile-menu-tab.active {
+    background: #eff6ff;
+    color: #3b82f6;
+    border-left: 4px solid #3b82f6;
+}
+
+/* Mobile Card Layout */
+.client-card {
+    display: block;
+    background: white;
+    margin: 10px 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.client-card-header {
+    padding: 15px;
+    cursor: pointer;
+    min-height: 44px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+
+.client-card-header:hover {
+    background: #f8fafc;
+}
+
+.client-card-main {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+}
+
+.client-card-name {
+    font-weight: bold;
+    font-size: 16px;
+    color: #1e293b;
+}
+
+.client-card-matter {
+    font-size: 14px;
+    color: #64748b;
+}
+
+.client-card-status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.client-card-expand {
+    color: #64748b;
+    font-size: 18px;
+    transition: transform 0.3s ease;
+    margin-left: 10px;
+}
+
+.client-card.expanded .client-card-expand {
+    transform: rotate(180deg);
+}
+
+.client-card-details {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 15px;
+}
+
+.client-card.expanded .client-card-details {
+    max-height: 500px;
+    padding: 0 15px 15px;
+}
+
+.client-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.client-card-row:last-child {
+    border-bottom: none;
+}
+
+.client-card-label {
+    font-weight: 600;
+    color: #475569;
+    min-width: 80px;
+}
+
+.client-card-value {
+    color: #1e293b;
+    text-align: right;
+    flex: 1;
+    margin-left: 10px;
+    word-wrap: break-word;
+}
+
+.client-card-charges {
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.client-card-charges strong {
+    color: #475569;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.client-card-letters {
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.client-card-letters strong {
+    color: #475569;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.client-card-letter-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.client-card-actions {
+    padding: 15px 0 5px;
+}
+
+.client-card-btn {
+    width: 100%;
+    padding: 12px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-appearance: none;
+}
+
+.client-card-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+/* Court Calendar Mobile Styles */
+.calendar-navigation {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.week-grid-container {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    margin: 30px 0;
+}
+
+.day-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+    position: relative;
+}
+
+.day-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.day-empty { background: #f9fafb; border-color: #e5e7eb; }
+.day-light { background: #dcfce7; border-color: #86efac; }
+.day-medium { background: #fef3c7; border-color: #fcd34d; }
+.day-heavy { background: #fee2e2; border-color: #fca5a5; }
+
+.day-header {
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #1e293b;
+}
+
+.day-stats {
+    font-size: 14px;
+}
+
+/* Mobile Media Queries */
+@media (max-width: 768px) {
+    /* Hide desktop navigation */
+    .tabs {
+        display: none;
+    }
+
+    /* Show mobile menu elements */
+    .mobile-menu-toggle {
+        display: flex;
+    }
+
+    .mobile-menu-overlay {
+        display: block;
+    }
+
+    .mobile-menu {
+        display: block;
+    }
+
+    /* Header adjustments */
+    .header {
+        position: relative;
+        padding: 20px;
+    }
+
+    .mobile-menu-toggle {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+    }
+
+    /* Hide desktop table */
+    .master-table {
+        display: none !important;
+    }
+
+    /* Show mobile cards */
+    #clientCardsContainer {
+        display: block !important;
+    }
+
+    /* Container adjustments */
+    .container {
+        padding: 0 10px;
+    }
+
+    body {
+        padding: 10px;
+    }
+
+    .tab-content {
+        padding: 20px 15px;
+    }
+
+    /* Form adjustments */
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group select,
+    .form-group input,
+    .form-group textarea {
+        -webkit-appearance: none;
+        touch-action: manipulation;
+        border-radius: 8px;
+        font-size: 16px;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+    }
+
+    /* Button adjustments */
+    .btn {
+        padding: 12px 16px;
+        font-size: 16px;
+        margin-bottom: 10px;
+        margin-right: 5px;
+        touch-action: manipulation;
+        -webkit-appearance: none;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+    }
+
+    .form-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+        margin-right: 0;
+    }
+
+    /* Checkbox groups responsive */
+    .checkbox-group {
+        grid-template-columns: 1fr;
+    }
+
+    .checkbox-item {
+        touch-action: manipulation;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+        position: relative;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .checkbox-item input[type="checkbox"],
+    .checkbox-item input[type="radio"] {
+        min-width: 24px;
+        min-height: 24px;
+        cursor: pointer;
+        position: relative;
+        z-index: 2;
+    }
+
+    .radio-group {
+        flex-direction: column;
+    }
+
+    .radio-item {
+        width: 100%;
+        min-height: 48px;
+    }
+
+    .radio-item input[type="radio"] {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Court Calendar Mobile */
+    .calendar-navigation {
+        flex-direction: column;
+    }
+
+    .calendar-navigation .btn {
+        width: 100%;
+        margin: 5px 0;
+    }
+
+    .week-grid-container {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .day-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+    }
+
+    .day-header {
+        font-size: 16px;
+    }
+
+    .day-stats {
+        text-align: right;
+    }
+
+    /* Modal adjustments */
+    .modal-content {
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        padding: 20px;
+        margin: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        transform: none;
+    }
+
+    .close {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        font-size: 32px;
+        z-index: 1001;
+        background: white;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Global mobile interaction fixes */
+    * {
+        -webkit-tap-highlight-color: rgba(0,0,0,0);
+        -webkit-touch-callout: none;
+    }
+
+    /* Ensure all clickable elements are responsive */
+    button, input, select, textarea, [onclick], [onchange] {
+        touch-action: manipulation !important;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    /* Form elements should allow text selection */
+    input, select, textarea {
+        -webkit-user-select: text;
+        user-select: text;
+    }
+
+    /* Prevent zoom on input focus */
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="date"],
+    input[type="time"],
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
+
+/* Desktop: Hide cards container, show table */
+@media (min-width: 769px) {
+    #clientCardsContainer {
+        display: none !important;
+    }
+    
+    .client-card {
+        display: none;
+    }
+}
+
+/* Tablet specific adjustments */
+@media (min-width: 431px) and (max-width: 768px) {
+    .week-grid-container {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+    }
+
+    .tab {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 150px;
+    }
+
+    #clientCardsContainer .client-card {
+        margin: 8px 0;
+    }
+
+    .client-card-header {
+        padding: 18px;
+    }
+}
+
+/* Small mobile devices */
+@media (max-width: 430px) {
+    .mobile-menu {
+        width: 80vw;
+    }
+
+    .header {
+        padding: 15px;
+    }
+
+    .tab-content {
+        padding: 15px 10px;
+    }
+
+    .client-card-header {
+        padding: 12px;
+    }
+
+    .client-card-name {
+        font-size: 15px;
+    }
+
+    .client-card-matter {
+        font-size: 13px;
+    }
+
+    body {
+        padding: 10px;
+        font-size: 16px;
+        -webkit-text-size-adjust: 100%;
+    }
+
+    .container {
+        padding: 0;
+    }
+
+    /* Safe area for iPhone notch */
+    .header {
+        padding-top: calc(20px + env(safe-area-inset-top));
+    }
+
+    .container {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+
+    /* Touch-friendly scrolling */
+    .tab-content, .modal-content {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Add client button - fixed position */
+    .add-client-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        font-size: 24px;
+    }
+}
