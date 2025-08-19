@@ -27,22 +27,22 @@
         // Convert "Surname, First Name Middle Name" to "First Name Middle Name Surname"
         const convertNameFormat = (name) => {
             if (!name || typeof name !== 'string') return name || '';
-            
+
             // Trim whitespace
             name = name.trim();
-            
+
             // Check if name contains a comma (Excel format)
             if (name.includes(',')) {
                 const parts = name.split(',');
                 if (parts.length >= 2) {
                     const surname = parts[0].trim();
                     const firstAndMiddle = parts[1].trim();
-                    
+
                     // Return in "First Middle Surname" format
                     return `${firstAndMiddle} ${surname}`;
                 }
             }
-            
+
             // If no comma, assume it's already in correct format
             return name;
         };
@@ -172,7 +172,7 @@
                                     <span class="client-card-value">${client.nextCourt ? formatDate(client.nextCourt) : 'TBD'}</span>
                                 </div>
                                 <div class="client-card-actions">
-                                    <button class="client-card-btn" onclick="event.stopPropagation(); selectClientForLetter(${client.id})" 
+                                    <button class="client-card-btn" onclick="event.stopPropagation(); selectClientForLetter(${client.id})"
                                             style="margin-bottom: 8px;">
                                         Generate Letter
                                     </button>
@@ -329,7 +329,7 @@
         // ===== SUBPOENA SYSTEM INTEGRATION =====
         const openSubpoenaSystem = (clientId = null) => {
             let url = 'subpoena.html';
-            
+
             if (clientId) {
                 const client = clients.find(c => c.id === clientId);
                 if (client) {
@@ -340,12 +340,12 @@
                         court: client.court || ''
                     });
                     url += '?' + params.toString();
-                    
+
                     // Also store in localStorage as backup
                     localStorage.setItem('selectedClient', JSON.stringify(client));
                 }
             }
-            
+
             window.open(url, '_blank');
         };
 
@@ -2860,11 +2860,11 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 // Remove any existing listeners
                 item.removeEventListener('click', handleCheckboxClick);
                 item.removeEventListener('touchend', handleCheckboxTouch);
-                
+
                 // Add new listeners
                 item.addEventListener('click', handleCheckboxClick);
                 item.addEventListener('touchend', handleCheckboxTouch);
-                
+
                 // Update visual state based on checkbox
                 const checkbox = item.querySelector('input[type="checkbox"], input[type="radio"]');
                 if (checkbox && checkbox.checked) {
@@ -2876,20 +2876,20 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         const handleCheckboxClick = function(e) {
             // Prevent double triggering
             if (e.detail > 1) return;
-            
+
             const checkbox = this.querySelector('input[type="checkbox"], input[type="radio"]');
             if (!checkbox || e.target === checkbox) return;
-            
+
             e.preventDefault();
             checkbox.checked = !checkbox.checked;
-            
+
             // Update visual state
             if (checkbox.checked) {
                 this.classList.add('checked');
             } else {
                 this.classList.remove('checked');
             }
-            
+
             // Trigger change event
             checkbox.dispatchEvent(new Event('change', { bubbles: true }));
         };
@@ -2897,19 +2897,19 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         const handleCheckboxTouch = function(e) {
             // Prevent click event from also firing
             e.preventDefault();
-            
+
             const checkbox = this.querySelector('input[type="checkbox"], input[type="radio"]');
             if (!checkbox) return;
-            
+
             checkbox.checked = !checkbox.checked;
-            
+
             // Update visual state
             if (checkbox.checked) {
                 this.classList.add('checked');
             } else {
                 this.classList.remove('checked');
             }
-            
+
             // Trigger change event
             checkbox.dispatchEvent(new Event('change', { bubbles: true }));
         };
@@ -3159,7 +3159,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         }
 
         .checkbox-item input[type="checkbox"],
-        .checkbox-item input[type="radio"] { 
+        .checkbox-item input[type="radio"] {
             width: 20px;
             height: 20px;
             min-width: 20px;
