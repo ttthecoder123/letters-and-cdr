@@ -385,6 +385,16 @@
             openSubpoenaSystem(clientId);
         };
 
+        // ===== TASK PRIORITY SYSTEM INTEGRATION =====
+        const openTaskPrioritySystem = () => {
+            window.open('task-priority.html', '_blank');
+        };
+
+        const openTaskPrioritySystemMobile = () => {
+            closeMobileMenu();
+            openTaskPrioritySystem();
+        };
+
         // ===== CDR FUNCTIONS =====
         const loadCDRClientInfo = () => {
             const clientId = parseInt(document.getElementById('cdrClientSelect').value);
@@ -4506,6 +4516,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             <button class="tab" onclick="switchTab('analytics', event)">Analytics</button>
             <button class="tab" onclick="switchTab('filenote', event)">File Note</button>
             <button class="tab" onclick="openSubpoenaSystem()">Subpoena</button>
+            <button class="tab" onclick="openTaskPrioritySystem()">Task Priorities</button>
         </div>
 
         <!-- Mobile Menu Overlay -->
@@ -4524,6 +4535,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 <button class="mobile-menu-tab" onclick="switchTabMobile('analytics', event)">Analytics</button>
                 <button class="mobile-menu-tab" onclick="switchTabMobile('filenote', event)">File Note</button>
                 <button class="mobile-menu-tab" onclick="openSubpoenaSystemMobile()">Subpoena</button>
+                <button class="mobile-menu-tab" onclick="openTaskPrioritySystemMobile()">Task Priorities</button>
             </div>
         </div>
 
