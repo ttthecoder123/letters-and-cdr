@@ -47,6 +47,33 @@
             return name;
         };
 
+        // Convert "First Name Middle Name Surname" back to "Surname, First Name Middle Name" for display
+        const getDisplayNameFormat = (name) => {
+            if (!name || typeof name !== 'string') return name || '';
+            
+            // Trim whitespace
+            name = name.trim();
+            
+            // If name already contains comma, it's likely already in display format
+            if (name.includes(',')) {
+                return name;
+            }
+            
+            // Split the name into parts
+            const parts = name.split(' ');
+            if (parts.length >= 2) {
+                // Take the last part as surname, everything else as first/middle names
+                const surname = parts[parts.length - 1];
+                const firstAndMiddle = parts.slice(0, -1).join(' ');
+                
+                // Return in "Surname, First Middle" format
+                return `${surname}, ${firstAndMiddle}`;
+            }
+            
+            // If only one part, return as is
+            return name;
+        };
+
         const getTemplateFileName = (type) => ({
             'CCL': 'CCL_Template.docx',
             'Mention': 'Mention_Template.docx',
@@ -192,21 +219,21 @@
             const select = document.getElementById('clientSelect');
             if (!select) return;
             select.innerHTML = '<option value="">-- Select a Client --</option>' +
-                clients.map(c => `<option value="${c.id}">${c.name} (${c.matterNumber})</option>`).join('');
+                clients.map(c => `<option value="${c.id}">${getDisplayNameFormat(c.name)} (${c.matterNumber})</option>`).join('');
         };
 
         const loadCDRClientSelect = () => {
             const select = document.getElementById('cdrClientSelect');
             if (!select) return;
             select.innerHTML = '<option value="">-- Manual Entry --</option>' +
-                clients.map(c => `<option value="${c.id}">${c.name} (${c.matterNumber})</option>`).join('');
+                clients.map(c => `<option value="${c.id}">${getDisplayNameFormat(c.name)} (${c.matterNumber})</option>`).join('');
         };
 
         const loadFileNoteClientSelect = () => {
             const select = document.getElementById('fileNoteClientSelect');
             if (!select) return;
             select.innerHTML = '<option value="">-- Select a Client --</option>' +
-                clients.map(c => `<option value="${c.id}">${c.name} (${c.matterNumber})</option>`).join('');
+                clients.map(c => `<option value="${c.id}">${getDisplayNameFormat(c.name)} (${c.matterNumber})</option>`).join('');
         };
 
         const updateAnalytics = () => {
