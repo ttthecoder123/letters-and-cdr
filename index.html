@@ -337,6 +337,9 @@
                 ccl: false,
                 mention: false,
                 final: false,
+                taskPriority: null,
+                lastStatusUpdate: null,
+                priorityNotes: '',
                 letterHistory: []
             };
 
@@ -858,6 +861,9 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         mention: row['Mention Sent'] === 'Yes' || false,
                         final: row['Final Sent'] === 'Yes' || false,
                         nextCourt: row['Next Court Date'] || '',
+                        taskPriority: row['Task Priority'] || null,
+                        lastStatusUpdate: row['Last Status Update'] || null,
+                        priorityNotes: row['Priority Notes'] || '',
                         letterHistory: []
                     }));
 
@@ -919,6 +925,9 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 'Mention Sent': client.mention ? 'Yes' : 'No',
                 'Final Sent': client.final ? 'Yes' : 'No',
                 'Next Court Date': client.nextCourt,
+                'Task Priority': client.taskPriority || '',
+                'Last Status Update': client.lastStatusUpdate || '',
+                'Priority Notes': client.priorityNotes || '',
                 'Last Updated': new Date().toLocaleDateString('en-AU')
             }));
 
