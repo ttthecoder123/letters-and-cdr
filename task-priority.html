@@ -1,1 +1,967 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Priority Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            color: #1e293b;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #64748b;
+            font-size: 16px;
+        }
+
+        .return-btn {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .return-btn:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .priority-tasks-now { color: #10b981; }
+        .priority-tasks-pending { color: #eab308; }
+        .priority-admin-close { color: #f97316; }
+        .priority-unassigned { color: #6b7280; }
+
+        .controls {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls-top {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .filter-btn.active {
+            color: white;
+            border-color: transparent;
+        }
+
+        .filter-btn.tasks-now.active { background: #10b981; }
+        .filter-btn.tasks-pending.active { background: #eab308; }
+        .filter-btn.admin-close.active { background: #f97316; }
+        .filter-btn.unassigned.active { background: #6b7280; }
+        .filter-btn.show-all.active { background: #6366f1; }
+
+        .search-container {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        .sort-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .sort-select {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .priority-grid {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .grid-header {
+            background: #f8fafc;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: grid;
+            grid-template-columns: 1fr auto auto auto auto;
+            gap: 15px;
+            align-items: center;
+            font-weight: 600;
+            color: #475569;
+            font-size: 14px;
+        }
+
+        .matter-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto auto;
+            gap: 15px;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .matter-row:hover {
+            background: #f8fafc;
+        }
+
+        .matter-row.priority-urgent {
+            border-left: 4px solid #ef4444;
+        }
+
+        .matter-row.priority-stale {
+            opacity: 0.7;
+        }
+
+        .matter-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .matter-info p {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .priority-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .priority-badge.tasks-now {
+            background: #10b981;
+            color: white;
+        }
+
+        .priority-badge.tasks-pending {
+            background: #eab308;
+            color: white;
+        }
+
+        .priority-badge.admin-close {
+            background: #f97316;
+            color: white;
+        }
+
+        .priority-badge.unassigned {
+            background: #6b7280;
+            color: white;
+        }
+
+        .last-updated {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-edit {
+            background: #6366f1;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #4f46e5;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .empty-state h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .modal-header h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .modal-header p {
+            color: #64748b;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel {
+            padding: 10px 20px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            color: #64748b;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+            border-color: #cbd5e1;
+        }
+
+        .btn-save {
+            padding: 10px 20px;
+            border: none;
+            background: #10b981;
+            color: white;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-save:hover {
+            background: #059669;
+        }
+
+        .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+            opacity: 0;
+            transform: translateX(100px);
+            transition: all 0.3s;
+        }
+
+        .success-message.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header-top {
+                flex-direction: column;
+                gap: 15px;
+                align-items: stretch;
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .controls-top {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .filter-group {
+                justify-content: center;
+            }
+
+            .grid-header {
+                display: none;
+            }
+
+            .matter-row {
+                grid-template-columns: 1fr;
+                gap: 8px;
+                padding: 16px;
+            }
+
+            .matter-mobile-layout {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .matter-mobile-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .matter-mobile-bottom {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+
+            .modal {
+                padding: 10px;
+            }
+
+            .action-btn {
+                min-height: 44px;
+                padding: 8px 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-btn {
+                flex: 1;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <div>
+                    <h1>Task Priority Management</h1>
+                    <p>Track and manage matter priorities</p>
+                </div>
+                <button class="return-btn" onclick="returnToMainSystem()">
+                    ← Back to Main System
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-number priority-tasks-now" id="statsTasksNow">0</div>
+                <div class="stat-label">Tasks Now</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number priority-tasks-pending" id="statsTasksPending">0</div>
+                <div class="stat-label">Tasks Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number priority-admin-close" id="statsAdminClose">0</div>
+                <div class="stat-label">Admin/Close</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number priority-unassigned" id="statsUnassigned">0</div>
+                <div class="stat-label">Unassigned</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="controls-top">
+                <div class="filter-group">
+                    <button class="filter-btn show-all active" onclick="filterBy('all')">Show All</button>
+                    <button class="filter-btn tasks-now" onclick="filterBy('Tasks Now')">Tasks Now</button>
+                    <button class="filter-btn tasks-pending" onclick="filterBy('Tasks Pending')">Tasks Pending</button>
+                    <button class="filter-btn admin-close" onclick="filterBy('Admin/Close')">Admin/Close</button>
+                    <button class="filter-btn unassigned" onclick="filterBy(null)">Unassigned</button>
+                </div>
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="Search clients or matter numbers..." 
+                           onkeyup="searchMatters(this.value)">
+                </div>
+            </div>
+            <div class="sort-controls">
+                <label for="sortSelect">Sort by:</label>
+                <select class="sort-select" id="sortSelect" onchange="sortMatters()">
+                    <option value="priority">Priority</option>
+                    <option value="name">Client Name</option>
+                    <option value="updated">Last Updated</option>
+                    <option value="matter">Matter Number</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Priority Grid -->
+        <div class="priority-grid">
+            <div class="grid-header">
+                <div>Client & Matter</div>
+                <div>Priority</div>
+                <div>Last Updated</div>
+                <div>Actions</div>
+                <div></div>
+            </div>
+            <div id="mattersContainer">
+                <!-- Matters will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalClientName">Client Name</h3>
+                <p id="modalMatterNumber">Matter: ABC123</p>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Priority Status</label>
+                    <select class="form-select" id="modalPriority">
+                        <option value="">Unassigned</option>
+                        <option value="Tasks Now">Tasks Now</option>
+                        <option value="Tasks Pending">Tasks Pending</option>
+                        <option value="Admin/Close">Admin/Close</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority Notes</label>
+                    <textarea class="form-textarea" id="modalNotes" 
+                              placeholder="Add notes about this matter's priority status..."></textarea>
+                </div>
+                <div class="form-group">
+                    <small class="text-muted">Last updated: <span id="modalLastUpdated">Never</span></small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-save" onclick="savePriority()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    <div class="success-message" id="successMessage">
+        Priority updated successfully!
+    </div>
+
+    <script>
+        let clients = [];
+        let filteredClients = [];
+        let currentEditingClientId = null;
+        let currentFilter = 'all';
+
+        // Initialize the system
+        document.addEventListener('DOMContentLoaded', function() {
+            loadClients();
+            updateStats();
+            renderMatters();
+        });
+
+        // Load clients from localStorage
+        function loadClients() {
+            try {
+                const storedClients = localStorage.getItem('legalClients');
+                if (storedClients) {
+                    clients = JSON.parse(storedClients);
+                    console.log(`Loaded ${clients.length} clients from localStorage`);
+                } else {
+                    clients = [];
+                    console.log('No clients found in localStorage');
+                }
+            } catch (error) {
+                console.error('Error loading clients:', error);
+                clients = [];
+            }
+            filteredClients = [...clients];
+        }
+
+        // Save clients to localStorage
+        function saveClients() {
+            try {
+                localStorage.setItem('legalClients', JSON.stringify(clients));
+                console.log('Clients saved to localStorage');
+                return true;
+            } catch (error) {
+                console.error('Error saving clients:', error);
+                return false;
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            const stats = {
+                tasksNow: 0,
+                tasksPending: 0,
+                adminClose: 0,
+                unassigned: 0
+            };
+
+            clients.forEach(client => {
+                switch (client.taskPriority) {
+                    case 'Tasks Now':
+                        stats.tasksNow++;
+                        break;
+                    case 'Tasks Pending':
+                        stats.tasksPending++;
+                        break;
+                    case 'Admin/Close':
+                        stats.adminClose++;
+                        break;
+                    default:
+                        stats.unassigned++;
+                        break;
+                }
+            });
+
+            document.getElementById('statsTasksNow').textContent = stats.tasksNow;
+            document.getElementById('statsTasksPending').textContent = stats.tasksPending;
+            document.getElementById('statsAdminClose').textContent = stats.adminClose;
+            document.getElementById('statsUnassigned').textContent = stats.unassigned;
+        }
+
+        // Filter matters by priority
+        function filterBy(priority) {
+            currentFilter = priority;
+            
+            // Update filter button states
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            if (priority === 'all') {
+                document.querySelector('.filter-btn.show-all').classList.add('active');
+                filteredClients = [...clients];
+            } else {
+                if (priority === null) {
+                    document.querySelector('.filter-btn.unassigned').classList.add('active');
+                    filteredClients = clients.filter(c => !c.taskPriority);
+                } else {
+                    const btnClass = priority.toLowerCase().replace(/[^a-z]/g, '-');
+                    document.querySelector(`.filter-btn.${btnClass.replace('--', '-')}`).classList.add('active');
+                    filteredClients = clients.filter(c => c.taskPriority === priority);
+                }
+            }
+
+            renderMatters();
+        }
+
+        // Search matters
+        function searchMatters(query) {
+            if (!query.trim()) {
+                filterBy(currentFilter);
+                return;
+            }
+
+            const searchQuery = query.toLowerCase();
+            let baseClients = currentFilter === 'all' ? clients : 
+                            currentFilter === null ? clients.filter(c => !c.taskPriority) :
+                            clients.filter(c => c.taskPriority === currentFilter);
+
+            filteredClients = baseClients.filter(client => 
+                client.name?.toLowerCase().includes(searchQuery) ||
+                client.matterNumber?.toLowerCase().includes(searchQuery) ||
+                client.court?.toLowerCase().includes(searchQuery) ||
+                client.charges?.toLowerCase().includes(searchQuery)
+            );
+
+            renderMatters();
+        }
+
+        // Sort matters
+        function sortMatters() {
+            const sortBy = document.getElementById('sortSelect').value;
+            
+            filteredClients.sort((a, b) => {
+                switch (sortBy) {
+                    case 'priority':
+                        const priorityOrder = {'Tasks Now': 1, 'Tasks Pending': 2, 'Admin/Close': 3, '': 4, null: 4, undefined: 4};
+                        return (priorityOrder[a.taskPriority] || 4) - (priorityOrder[b.taskPriority] || 4);
+                    
+                    case 'name':
+                        return (a.name || '').localeCompare(b.name || '');
+                    
+                    case 'updated':
+                        const aDate = new Date(a.lastStatusUpdate || 0);
+                        const bDate = new Date(b.lastStatusUpdate || 0);
+                        return bDate - aDate;
+                    
+                    case 'matter':
+                        return (a.matterNumber || '').localeCompare(b.matterNumber || '');
+                    
+                    default:
+                        return 0;
+                }
+            });
+
+            renderMatters();
+        }
+
+        // Render matters list
+        function renderMatters() {
+            const container = document.getElementById('mattersContainer');
+            
+            if (filteredClients.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No matters found</h3>
+                        <p>Try adjusting your filters or search terms.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredClients.map(client => {
+                const priorityClass = getPriorityClass(client.taskPriority);
+                const priorityDisplay = client.taskPriority || 'Unassigned';
+                const lastUpdated = client.lastStatusUpdate ? 
+                    formatDate(client.lastStatusUpdate) : 'Never';
+                
+                const isUrgent = isTaskUrgent(client);
+                const isStale = isTaskStale(client);
+                const rowClasses = ['matter-row'];
+                if (isUrgent) rowClasses.push('priority-urgent');
+                if (isStale) rowClasses.push('priority-stale');
+
+                return `
+                    <div class="${rowClasses.join(' ')}" onclick="openEditModal(${client.id})">
+                        <div class="matter-mobile-layout">
+                            <div class="matter-mobile-top">
+                                <div class="matter-info">
+                                    <h3>${client.name || 'Unknown Client'}</h3>
+                                    <p>Matter: ${client.matterNumber || 'No matter number'}</p>
+                                    ${client.court ? `<p>Court: ${client.court}</p>` : ''}
+                                </div>
+                                <div class="priority-badge ${priorityClass}">
+                                    ${priorityDisplay}
+                                </div>
+                            </div>
+                            <div class="matter-mobile-bottom">
+                                <div class="last-updated">
+                                    Last updated: ${lastUpdated}
+                                    ${isStale ? ' ⏰' : ''}
+                                </div>
+                                <button class="action-btn btn-edit" onclick="event.stopPropagation(); openEditModal(${client.id})">
+                                    Edit Priority
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Get priority CSS class
+        function getPriorityClass(priority) {
+            switch (priority) {
+                case 'Tasks Now': return 'tasks-now';
+                case 'Tasks Pending': return 'tasks-pending';
+                case 'Admin/Close': return 'admin-close';
+                default: return 'unassigned';
+            }
+        }
+
+        // Check if task is urgent (Tasks Now for >3 days)
+        function isTaskUrgent(client) {
+            if (client.taskPriority !== 'Tasks Now' || !client.lastStatusUpdate) {
+                return false;
+            }
+            const daysDiff = (Date.now() - new Date(client.lastStatusUpdate)) / (1000 * 60 * 60 * 24);
+            return daysDiff > 3;
+        }
+
+        // Check if task is stale (not updated in >30 days)
+        function isTaskStale(client) {
+            if (!client.lastStatusUpdate) return true;
+            const daysDiff = (Date.now() - new Date(client.lastStatusUpdate)) / (1000 * 60 * 60 * 24);
+            return daysDiff > 30;
+        }
+
+        // Format date for display
+        function formatDate(dateString) {
+            if (!dateString) return 'Never';
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays} days ago`;
+            if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+            if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+            return date.toLocaleDateString();
+        }
+
+        // Open edit modal
+        function openEditModal(clientId) {
+            const client = clients.find(c => c.id === clientId);
+            if (!client) return;
+
+            currentEditingClientId = clientId;
+            
+            document.getElementById('modalClientName').textContent = client.name || 'Unknown Client';
+            document.getElementById('modalMatterNumber').textContent = `Matter: ${client.matterNumber || 'No matter number'}`;
+            document.getElementById('modalPriority').value = client.taskPriority || '';
+            document.getElementById('modalNotes').value = client.priorityNotes || '';
+            document.getElementById('modalLastUpdated').textContent = 
+                client.lastStatusUpdate ? formatDate(client.lastStatusUpdate) : 'Never';
+
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('active');
+            currentEditingClientId = null;
+        }
+
+        // Save priority changes
+        function savePriority() {
+            if (!currentEditingClientId) return;
+
+            const client = clients.find(c => c.id === currentEditingClientId);
+            if (!client) return;
+
+            const priority = document.getElementById('modalPriority').value || null;
+            const notes = document.getElementById('modalNotes').value.trim();
+
+            client.taskPriority = priority;
+            client.priorityNotes = notes;
+            client.lastStatusUpdate = new Date().toISOString();
+
+            if (saveClients()) {
+                showSuccessMessage();
+                updateStats();
+                renderMatters();
+                closeModal();
+            }
+        }
+
+        // Show success message
+        function showSuccessMessage() {
+            const msg = document.getElementById('successMessage');
+            msg.classList.add('show');
+            setTimeout(() => {
+                msg.classList.remove('show');
+            }, 3000);
+        }
+
+        // Return to main system
+        function returnToMainSystem() {
+            window.close();
+            // If window.close() doesn't work (not opened via JS), try to navigate
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 100);
+        }
+
+        // Handle modal click outside to close
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Handle escape key to close modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
