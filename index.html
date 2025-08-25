@@ -24,6 +24,13 @@
 
         const getTodayDate = () => new Date().toISOString().split('T')[0];
 
+        // Update new client data when user types in the manual entry fields
+        const updateNewClientData = (field, value) => {
+            if (currentClient && currentClient.isNew) {
+                currentClient[field] = value;
+            }
+        };
+
         // Convert "Surname, First Name Middle Name" to "First Name Middle Name Surname"
         const convertNameFormat = (name) => {
             if (!name || typeof name !== 'string') return name || '';
@@ -219,6 +226,7 @@
             const select = document.getElementById('clientSelect');
             if (!select) return;
             select.innerHTML = '<option value="">-- Select a Client --</option>' +
+                '<option value="new">-- New Client (Not in Database) --</option>' +
                 clients.map(c => `<option value="${c.id}">${getDisplayNameFormat(c.name)} (${c.matterNumber})</option>`).join('');
         };
 
@@ -639,36 +647,82 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
 
         // ===== LETTER GENERATION =====
         const loadClientInfo = () => {
-            const clientId = parseInt(document.getElementById('clientSelect').value);
+            const selectValue = document.getElementById('clientSelect').value;
             const section = document.getElementById('clientInfoSection');
 
-            if (!clientId) {
+            if (!selectValue) {
                 section.style.display = 'none';
                 return;
             }
 
-            currentClient = clients.find(c => c.id === clientId);
-            if (!currentClient) return;
-
             section.style.display = 'block';
 
-            document.getElementById('clientInfoGrid').innerHTML = `
-                ${['name:Client Name', 'address:Address', 'matterNumber:Matter Number', 'court:Court',
-                   'matterType:Matter Type', 'charges:Charges', 'legalAid:Legal Aid', 'nextCourt:Next Court']
-                   .map(field => {
-                       const [key, label] = field.split(':');
-                       let value = currentClient[key];
-                       if (key === 'address' && !value) value = 'Not provided';
-                       if (key === 'legalAid') value = value ? 'Yes' : 'No';
-                       if (key === 'nextCourt') value = value ? formatDate(value) : 'TBD';
-                       return `<div class="info-item">
-                           <div class="info-label">${label}</div>
-                           <div class="info-value">${value || ''}</div>
-                       </div>`;
-                   }).join('')}`;
+            // Handle new client mode
+            if (selectValue === 'new') {
+                // Create a temporary client object for new client
+                currentClient = {
+                    id: 'new',
+                    name: '',
+                    address: '',
+                    matterNumber: '',
+                    court: '',
+                    matterType: '',
+                    charges: '',
+                    legalAid: false,
+                    nextCourt: '',
+                    isNew: true
+                };
+
+                // Show editable form for new client
+                document.getElementById('clientInfoGrid').innerHTML = `
+                    ${['name:Client Name', 'address:Address', 'matterNumber:Matter Number', 'court:Court',
+                       'matterType:Matter Type', 'charges:Charges', 'legalAid:Legal Aid', 'nextCourt:Next Court']
+                       .map(field => {
+                           const [key, label] = field.split(':');
+                           let inputHtml = '';
+                           
+                           if (key === 'legalAid') {
+                               inputHtml = `<select id="newClient_${key}" class="new-client-input" onchange="updateNewClientData('${key}', this.value === 'true')">
+                                   <option value="false">No</option>
+                                   <option value="true">Yes</option>
+                               </select>`;
+                           } else if (key === 'nextCourt') {
+                               inputHtml = `<input type="date" id="newClient_${key}" class="new-client-input" onchange="updateNewClientData('${key}', this.value)">`;
+                           } else if (key === 'charges') {
+                               inputHtml = `<textarea id="newClient_${key}" class="new-client-input" rows="2" placeholder="Enter charges" onchange="updateNewClientData('${key}', this.value)"></textarea>`;
+                           } else {
+                               inputHtml = `<input type="text" id="newClient_${key}" class="new-client-input" placeholder="Enter ${label.toLowerCase()}" onchange="updateNewClientData('${key}', this.value)">`;
+                           }
+                           
+                           return `<div class="info-item">
+                               <div class="info-label">${label}</div>
+                               <div class="info-value">${inputHtml}</div>
+                           </div>`;
+                       }).join('')}`;
+            } else {
+                // Handle existing client
+                const clientId = parseInt(selectValue);
+                currentClient = clients.find(c => c.id === clientId);
+                if (!currentClient) return;
+
+                document.getElementById('clientInfoGrid').innerHTML = `
+                    ${['name:Client Name', 'address:Address', 'matterNumber:Matter Number', 'court:Court',
+                       'matterType:Matter Type', 'charges:Charges', 'legalAid:Legal Aid', 'nextCourt:Next Court']
+                       .map(field => {
+                           const [key, label] = field.split(':');
+                           let value = currentClient[key];
+                           if (key === 'address' && !value) value = 'Not provided';
+                           if (key === 'legalAid') value = value ? 'Yes' : 'No';
+                           if (key === 'nextCourt') value = value ? formatDate(value) : 'TBD';
+                           return `<div class="info-item">
+                               <div class="info-label">${label}</div>
+                               <div class="info-value">${value || ''}</div>
+                           </div>`;
+                       }).join('')}`;
+            }
 
             const historyList = document.getElementById('letterHistoryList');
-            if (currentClient.letterHistory?.length > 0) {
+            if (currentClient && !currentClient.isNew && currentClient.letterHistory?.length > 0) {
                 historyList.innerHTML = currentClient.letterHistory.map(letter => `
                     <div class="letter-item">
                         <div>
@@ -735,6 +789,14 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 return;
             }
 
+            // Validate new client data
+            if (currentClient.isNew) {
+                if (!currentClient.name || !currentClient.matterNumber) {
+                    alert('Please fill in at least the Client Name and Matter Number for the new client');
+                    return;
+                }
+            }
+
             let prompt = '';
 
             switch(letterType) {
@@ -756,25 +818,27 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
             outputDiv.textContent = prompt;
             outputDiv.style.display = 'block';
 
-            // Update letter history
-            if (!currentClient.letterHistory) currentClient.letterHistory = [];
-            currentClient.letterHistory.push({
-                type: letterType,
-                date: new Date().toISOString().slice(0,10),
-                notes: `Generated ${letterType} prompt`
-            });
+            // Update letter history (only for existing clients)
+            if (!currentClient.isNew) {
+                if (!currentClient.letterHistory) currentClient.letterHistory = [];
+                currentClient.letterHistory.push({
+                    type: letterType,
+                    date: new Date().toISOString().slice(0,10),
+                    notes: `Generated ${letterType} prompt`
+                });
 
-            // Update letter sent status
-            switch(letterType) {
-                case 'CCL':
-                    currentClient.ccl = true;
-                    break;
-                case 'Mention':
-                    currentClient.mention = true;
-                    break;
-                case 'Final':
-                    currentClient.final = true;
-                    break;
+                // Update letter sent status
+                switch(letterType) {
+                    case 'CCL':
+                        currentClient.ccl = true;
+                        break;
+                    case 'Mention':
+                        currentClient.mention = true;
+                        break;
+                    case 'Final':
+                        currentClient.final = true;
+                        break;
+                }
             }
 
             saveData();
@@ -814,6 +878,11 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
 
             if (!currentClient || !letterType) {
                 alert('Please select a client and generate a letter first');
+                return;
+            }
+
+            if (currentClient.isNew) {
+                alert('Cannot update Excel record for a new client that is not in the database');
                 return;
             }
 
@@ -3289,6 +3358,26 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         .info-value {
             font-weight: 500;
             color: #1f2937;
+        }
+
+        .new-client-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .new-client-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        textarea.new-client-input {
+            resize: vertical;
+            min-height: 60px;
         }
 
         .section {
