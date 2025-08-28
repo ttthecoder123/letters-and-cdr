@@ -549,9 +549,11 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 reason: document.getElementById('cdrReason').value,
                 court: document.getElementById('cdrCourt').value,
                 courtTime: document.getElementById('cdrCourtTime').value,
-                allocateTo: getAllocatedTo(), // Combined for display
-                sendToAdmin: sendToAdmin, // Separate field for email TO
-                ccSolicitors: ccSolicitors.join(', '), // Separate field for email CC
+                allocateTo: getAllocatedTo(), // Only solicitors for display
+                toEmail: adminEmails[sendToAdmin] || '', // Admin email address
+                ccEmails: ccSolicitors.map(code => solicitorEmails[code]).filter(email => email).join(' '), // Space-separated solicitor emails
+                sendToAdmin: sendToAdmin, // Keep for backwards compatibility
+                ccSolicitors: ccSolicitors.join(', '), // Keep for backwards compatibility
                 clientExcused: document.getElementById('cdrClientExcused').checked,
                 feeReminder: document.getElementById('cdrFeeReminder').value,
                 additionalDates: document.getElementById('cdrAdditionalDates')?.value || ''
@@ -652,9 +654,11 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         reason: document.getElementById('letterCDRReason')?.value || '',
                         court: currentClient.court || '',
                         courtTime: '09:30',
-                        allocateTo: getLetterAllocatedTo(), // Combined for display
-                        sendToAdmin: letterSendToAdmin, // Separate field for email TO
-                        ccSolicitors: letterCCSolicitors.join(', '), // Separate field for email CC
+                        allocateTo: getLetterAllocatedTo(), // Only solicitors for display
+                        toEmail: adminEmails[letterSendToAdmin] || '', // Admin email address
+                        ccEmails: letterCCSolicitors.map(code => solicitorEmails[code]).filter(email => email).join(' '), // Space-separated solicitor emails
+                        sendToAdmin: letterSendToAdmin, // Keep for backwards compatibility
+                        ccSolicitors: letterCCSolicitors.join(', '), // Keep for backwards compatibility
                         clientExcused: document.getElementById('letterCDRClientExcused')?.checked || false,
                         feeReminder: '',
                         additionalDates: ''
