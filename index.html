@@ -431,32 +431,18 @@
 
         const getAllocatedTo = () => {
             const allocated = [];
-            // Get the admin from Send To dropdown
-            const sendToAdmin = document.getElementById('cdrSendToAdmin')?.value;
-            if (sendToAdmin) {
-                allocated.push(sendToAdmin);
-            }
-            // Get the CC solicitors from checkboxes
+            // Only get the CC solicitors from checkboxes (not admin)
             document.querySelectorAll('input[id^="allocate_"]:checked').forEach(cb => {
-                if (!allocated.includes(cb.value)) {
-                    allocated.push(cb.value);
-                }
+                allocated.push(cb.value);
             });
             return allocated.join(', ') || 'TBD';
         };
 
         const getLetterAllocatedTo = () => {
             const allocated = [];
-            // Get the admin from Send To dropdown
-            const sendToAdmin = document.getElementById('letterSendToAdmin')?.value;
-            if (sendToAdmin) {
-                allocated.push(sendToAdmin);
-            }
-            // Get the CC solicitors from checkboxes
+            // Only get the CC solicitors from checkboxes (not admin)
             document.querySelectorAll('input[id^="letter_allocate_"]:checked').forEach(cb => {
-                if (!allocated.includes(cb.value)) {
-                    allocated.push(cb.value);
-                }
+                allocated.push(cb.value);
             });
             return allocated.join(', ') || 'TBD';
         };
