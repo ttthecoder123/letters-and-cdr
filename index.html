@@ -431,13 +431,33 @@
 
         const getAllocatedTo = () => {
             const allocated = [];
-            document.querySelectorAll('input[id^="allocate_"]:checked').forEach(cb => allocated.push(cb.value));
+            // Get the admin from Send To dropdown
+            const sendToAdmin = document.getElementById('cdrSendToAdmin')?.value;
+            if (sendToAdmin) {
+                allocated.push(sendToAdmin);
+            }
+            // Get the CC solicitors from checkboxes
+            document.querySelectorAll('input[id^="allocate_"]:checked').forEach(cb => {
+                if (!allocated.includes(cb.value)) {
+                    allocated.push(cb.value);
+                }
+            });
             return allocated.join(', ') || 'TBD';
         };
 
         const getLetterAllocatedTo = () => {
             const allocated = [];
-            document.querySelectorAll('input[id^="letter_allocate_"]:checked').forEach(cb => allocated.push(cb.value));
+            // Get the admin from Send To dropdown
+            const sendToAdmin = document.getElementById('letterSendToAdmin')?.value;
+            if (sendToAdmin) {
+                allocated.push(sendToAdmin);
+            }
+            // Get the CC solicitors from checkboxes
+            document.querySelectorAll('input[id^="letter_allocate_"]:checked').forEach(cb => {
+                if (!allocated.includes(cb.value)) {
+                    allocated.push(cb.value);
+                }
+            });
             return allocated.join(', ') || 'TBD';
         };
 
@@ -502,6 +522,21 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
         const generateCDR = () => {
             // Reinitialize checkbox handlers in case they were lost
             initializeCheckboxHandlers();
+            
+            // Get separate sendToAdmin and ccSolicitors
+            const sendToAdmin = document.getElementById('cdrSendToAdmin')?.value || '';
+            
+            // Validate that admin is selected
+            if (!sendToAdmin) {
+                alert('Please select an Admin (CB or GB) in the "Send To" field');
+                return;
+            }
+            
+            const ccSolicitors = [];
+            document.querySelectorAll('input[id^="allocate_"]:checked').forEach(cb => {
+                ccSolicitors.push(cb.value);
+            });
+            
             const cdrData = {
                 outcomeCourt: document.getElementById('cdrOutcomeCourt').value,
                 outcomeDate: document.getElementById('cdrOutcomeDate').value,
@@ -514,7 +549,9 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 reason: document.getElementById('cdrReason').value,
                 court: document.getElementById('cdrCourt').value,
                 courtTime: document.getElementById('cdrCourtTime').value,
-                allocateTo: getAllocatedTo(),
+                allocateTo: getAllocatedTo(), // Combined for display
+                sendToAdmin: sendToAdmin, // Separate field for email TO
+                ccSolicitors: ccSolicitors.join(', '), // Separate field for email CC
                 clientExcused: document.getElementById('cdrClientExcused').checked,
                 feeReminder: document.getElementById('cdrFeeReminder').value,
                 additionalDates: document.getElementById('cdrAdditionalDates')?.value || ''
@@ -577,12 +614,57 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 hasCDR: hasCDR
             };
 
-            if (hasCDR && currentCDRData) {
-                payload.cdrData = {
-                    ...currentCDRData,
-                    cdrText: formatCDRText(currentCDRData),
-                    cdrHTML: formatCDRHTML(currentCDRData)
-                };
+            if (hasCDR) {
+                // If we have existing CDR data from CDR tab, use it
+                if (currentCDRData) {
+                    payload.cdrData = {
+                        ...currentCDRData,
+                        cdrText: formatCDRText(currentCDRData),
+                        cdrHTML: formatCDRHTML(currentCDRData)
+                    };
+                } 
+                // Otherwise, build CDR data from letter form fields
+                else if (!isCDROnly) {
+                    // Get separate sendToAdmin and ccSolicitors from letter form
+                    const letterSendToAdmin = document.getElementById('letterSendToAdmin')?.value || '';
+                    
+                    // Validate that admin is selected for letter CDR
+                    if (!letterSendToAdmin) {
+                        alert('Please select an Admin (CB or GB) in the CDR "Send To" field');
+                        statusDiv.style.display = 'none';
+                        return;
+                    }
+                    
+                    const letterCCSolicitors = [];
+                    document.querySelectorAll('input[id^="letter_allocate_"]:checked').forEach(cb => {
+                        letterCCSolicitors.push(cb.value);
+                    });
+                    
+                    const letterCDRData = {
+                        outcomeCourt: currentClient.court || '',
+                        outcomeDate: getTodayDate(),
+                        startTime: '09:30',
+                        finishTime: '10:00',
+                        courtDate: document.getElementById('nextCourtDate')?.value || '',
+                        solicitor: 'AAG',
+                        clientName: currentClient.name,
+                        fileNumber: currentClient.matterNumber,
+                        reason: document.getElementById('letterCDRReason')?.value || '',
+                        court: currentClient.court || '',
+                        courtTime: '09:30',
+                        allocateTo: getLetterAllocatedTo(), // Combined for display
+                        sendToAdmin: letterSendToAdmin, // Separate field for email TO
+                        ccSolicitors: letterCCSolicitors.join(', '), // Separate field for email CC
+                        clientExcused: document.getElementById('letterCDRClientExcused')?.checked || false,
+                        feeReminder: '',
+                        additionalDates: ''
+                    };
+                    payload.cdrData = {
+                        ...letterCDRData,
+                        cdrText: formatCDRText(letterCDRData),
+                        cdrHTML: formatCDRHTML(letterCDRData)
+                    };
+                }
             }
 
             const formData = new FormData();
@@ -627,6 +709,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     cdrReason: '',
                     cdrCourt: '',
                     cdrCourtTime: '09:30',
+                    cdrSendToAdmin: '', // Reset Send To dropdown
                     cdrClientExcused: false,
                     cdrFeeReminder: ''
                 };
@@ -639,6 +722,7 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     }
                 });
 
+                // Clear CC to Solicitors checkboxes
                 document.querySelectorAll('input[id^="allocate_"]').forEach(cb => cb.checked = false);
                 document.getElementById('cdrOutput').style.display = 'none';
                 currentCDRData = null;
@@ -870,6 +954,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                 document.getElementById('letterType').value = '';
                 document.getElementById('dynamicFields').innerHTML = '';
                 document.getElementById('promptOutput').style.display = 'none';
+                
+                // Clear letter CDR fields if they exist
+                const letterSendToAdmin = document.getElementById('letterSendToAdmin');
+                if (letterSendToAdmin) letterSendToAdmin.value = '';
+                
+                document.querySelectorAll('input[id^="letter_allocate_"]').forEach(cb => cb.checked = false);
+                
+                const letterCDRClientExcused = document.getElementById('letterCDRClientExcused');
+                if (letterCDRClientExcused) letterCDRClientExcused.checked = false;
             }
         };
 
@@ -4751,7 +4844,16 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                         </div>
 
                         <div class="form-group">
-                            <label>Allocate To:</label>
+                            <label for="letterSendToAdmin">Send To (Admin):*</label>
+                            <select id="letterSendToAdmin" required>
+                                <option value="">Select Admin (Required)</option>
+                                <option value="CB">CB</option>
+                                <option value="GB">GB</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>CC to Solicitors:</label>
                             <div class="checkbox-group">
                                 <div class="checkbox-item">
                                     <input type="checkbox" id="letter_allocate_AAG" value="AAG">
@@ -4882,7 +4984,15 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     <input type="time" id="cdrCourtTime" value="09:30">
                 </div>
                 <div class="form-group">
-                    <label>Allocate To:</label>
+                    <label for="cdrSendToAdmin">Send To (Admin):*</label>
+                    <select id="cdrSendToAdmin" required>
+                        <option value="">Select Admin (Required)</option>
+                        <option value="CB">CB</option>
+                        <option value="GB">GB</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>CC to Solicitors:</label>
                     <div class="checkbox-group">
                         <div class="checkbox-item" data-checkbox="allocate_AAG">
                             <input type="checkbox" id="allocate_AAG" value="AAG">
