@@ -14,6 +14,20 @@
         let courtCalendarData = [];
         let currentWeekNumber = null;
 
+        // ===== EMAIL MAPPINGS =====
+        const adminEmails = {
+            'CB': 'cbutler@marsdens.net.au',
+            'GB': 'gbaragry@marsdens.net.au'
+        };
+
+        const solicitorEmails = {
+            'AAG': 'ageorgieff@marsdens.net.au',
+            'RHH': 'rhahn-hamilton@marsdens.net.au',
+            'SRS': 'sseton@marsdens.net.au',
+            'BJB': 'bbrown@marsdens.net.au',
+            'NKM': 'nmcdonald@marsdens.net.au'
+        };
+
         // ===== UTILITIES =====
         const formatDate = (dateString) => {
             if (!dateString) return '';
