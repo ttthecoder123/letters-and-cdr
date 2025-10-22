@@ -271,3 +271,58 @@ const updateExcelRecord = () => {
         alert(`Excel database updated!\n${letterType} marked as sent for ${currentClient.name}`);
     }
 };
+        const toggleLegalAidFields = () => {
+            const status = document.getElementById('legalAidStatus')?.value;
+            const legalAidDetails = document.getElementById('legalAidDetails');
+            const privateDetails = document.getElementById('privateDetails');
+
+            if (legalAidDetails) legalAidDetails.style.display = status === 'Yes' ? 'block' : 'none';
+            if (privateDetails) privateDetails.style.display = status === 'No' ? 'block' : 'none';
+        };
+
+        const toggleDepositAmount = () => {
+            const paid = document.getElementById('depositPaid')?.value;
+            const details = document.getElementById('depositDetails');
+            if (details) details.style.display = paid === 'Yes' ? 'block' : 'none';
+        };
+
+        const togglePleaOptions = () => {
+            const plea = document.getElementById('plea')?.value;
+            const materials = document.getElementById('sentenceMaterials');
+            if (materials) materials.style.display = plea === 'Guilty' ? 'block' : 'none';
+        };
+
+        const toggleADVOFields = () => {
+            const advoType = document.getElementById('advoType')?.value;
+            const details = document.getElementById('advoDetails');
+            if (details) details.style.display = advoType ? 'block' : 'none';
+        };
+
+        const toggleBailFields = () => {
+            const hasBail = document.getElementById('hasBail')?.value;
+            const details = document.getElementById('bailDetails');
+            if (details) details.style.display = hasBail === 'Yes' ? 'block' : 'none';
+        };
+
+        const toggleFinalADVO = () => {
+            const finalADVO = document.getElementById('finalADVO')?.value;
+            const details = document.getElementById('finalADVODetails');
+            if (details) details.style.display = finalADVO === 'Yes' ? 'block' : 'none';
+        };
+
+        const checkPenaltyType = () => {
+            const outcome = document.getElementById('finalOutcome')?.value || document.getElementById('penalty')?.value;
+            const details = document.getElementById('penaltyDetails');
+            const conditions = document.getElementById('conditionsField');
+
+            if (details) {
+                const showDetails = outcome && outcome !== 'Not Guilty' && outcome !== 'Charges dismissed';
+                details.style.display = showDetails ? 'block' : 'none';
+
+                if (conditions) {
+                    conditions.style.display = (outcome?.includes('CRO') || outcome?.includes('CCO') ||
+                                               outcome?.includes('ICO')) ? 'block' : 'none';
+                }
+            }
+        };
+
