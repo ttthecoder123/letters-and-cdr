@@ -326,3 +326,132 @@ const updateExcelRecord = () => {
             }
         };
 
+        const sendToZapier = (isCDROnly = false) => {
+            const statusDiv = document.getElementById(isCDROnly ? 'cdrZapierStatus' : 'zapierStatus');
+
+            if (isCDROnly && !currentCDRData) {
+                alert('Please generate a CDR first');
+                return;
+            }
+
+            if (!isCDROnly) {
+                const promptText = document.getElementById('promptOutput').textContent;
+                const letterType = document.getElementById('letterType').value;
+
+                if (!promptText || !currentClient || !letterType) {
+                    alert('Please generate a prompt first');
+                    return;
+                }
+            }
+
+            statusDiv.style.display = 'block';
+            statusDiv.style.backgroundColor = '#fef3c7';
+            statusDiv.style.color = '#92400e';
+            statusDiv.textContent = 'Sending to Zapier...';
+
+            const hasCDR = isCDROnly || document.getElementById('generateCDRWithLetter')?.checked;
+
+            // Format today's date as "day month year" with month written out
+            const today = new Date();
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"];
+            const formattedDate = `${today.getDate()} ${monthNames[today.getMonth()]} ${today.getFullYear()}`;
+
+            // Get selected prefix
+            const clientPrefix = document.getElementById('clientPrefix')?.value || '';
+
+            const payload = {
+                type: isCDROnly ? 'CDR_ONLY' : (hasCDR ? 'LETTER_AND_CDR' : document.getElementById('letterType').value),
+                letterData: isCDROnly ? null : {
+                    letterType: document.getElementById('letterType').value,
+                    prompt: document.getElementById('promptOutput').textContent,
+                    clientName: currentClient.name,
+                    clientPrefix: clientPrefix,
+                    letterDate: formattedDate,
+                    matterNumber: currentClient.matterNumber,
+                    court: currentClient.court,
+                    templateFileName: getTemplateFileName(document.getElementById('letterType').value)
+                },
+                cdrData: null,
+                hasLetter: !isCDROnly,
+                hasCDR: hasCDR
+            };
+
+            if (hasCDR) {
+                // If we have existing CDR data from CDR tab, use it
+                if (currentCDRData) {
+                    payload.cdrData = {
+                        ...currentCDRData,
+                        cdrText: formatCDRText(currentCDRData),
+                        cdrHTML: formatCDRHTML(currentCDRData)
+                    };
+                } 
+                // Otherwise, build CDR data from letter form fields
+                else if (!isCDROnly) {
+                    // Get separate sendToAdmin and ccSolicitors from letter form
+                    const letterSendToAdmin = document.getElementById('letterSendToAdmin')?.value || '';
+                    
+                    // Validate that admin is selected for letter CDR
+                    if (!letterSendToAdmin) {
+                        alert('Please select an Admin (CB or GB) in the CDR "Send To" field');
+                        statusDiv.style.display = 'none';
+                        return;
+                    }
+                    
+                    const letterCCSolicitors = [];
+                    document.querySelectorAll('input[id^="letter_allocate_"]:checked').forEach(cb => {
+                        letterCCSolicitors.push(cb.value);
+                    });
+                    
+                    const letterCDRData = {
+                        outcomeCourt: currentClient.court || '',
+                        outcomeDate: getTodayDate(),
+                        startTime: '09:30',
+                        finishTime: '10:00',
+                        courtDate: document.getElementById('nextCourtDate')?.value || '',
+                        solicitor: 'AAG',
+                        clientName: currentClient.name,
+                        fileNumber: currentClient.matterNumber,
+                        reason: document.getElementById('letterCDRReason')?.value || '',
+                        court: currentClient.court || '',
+                        courtTime: '09:30',
+                        allocateTo: getLetterAllocatedTo(), // Combined for display
+                        sendToAdmin: letterSendToAdmin, // Separate field for email TO
+                        ccSolicitors: letterCCSolicitors.join(', '), // Separate field for email CC
+                        clientExcused: document.getElementById('letterCDRClientExcused')?.checked || false,
+                        feeReminder: '',
+                        additionalDates: ''
+                    };
+                    payload.cdrData = {
+                        ...letterCDRData,
+                        cdrText: formatCDRText(letterCDRData),
+                        cdrHTML: formatCDRHTML(letterCDRData)
+                    };
+                }
+            }
+
+            const formData = new FormData();
+            formData.append('data', JSON.stringify(payload));
+
+            fetch('https://hooks.zapier.com/hooks/catch/19713185/u47xnci/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    statusDiv.style.backgroundColor = '#d4edda';
+                    statusDiv.style.color = '#155724';
+                    statusDiv.textContent = '✓ Successfully sent to Zapier!';
+                    setTimeout(() => statusDiv.style.display = 'none', 3000);
+                } else {
+                    throw new Error('Failed to send');
+                }
+            })
+            .catch(error => {
+                statusDiv.style.backgroundColor = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.textContent = '✗ Failed to send to Zapier. Please try again.';
+                console.error('Zapier error:', error);
+            });
+        };
+
