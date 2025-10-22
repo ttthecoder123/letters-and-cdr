@@ -1,28 +1,4 @@
 
-const updateDatabaseStatus = (connected) => {
-    const status = document.getElementById('databaseStatus');
-    if (status) {
-        status.textContent = connected ?
-            `Database: Connected (${clients.length} clients)` :
-            'Database: Not Connected';
-        status.className = `database-status status-${connected ? 'connected' : 'disconnected'}`;
-    }
-};
-
-const updateUI = (components = ['all']) => {
-    if (components.includes('all') || components.includes('table')) {
-        loadClientTable();
-    }
-    if (components.includes('all') || components.includes('selects')) {
-        loadClientSelect();
-        loadCDRClientSelect();
-        loadFileNoteClientSelect();
-    }
-    if (components.includes('all') || components.includes('analytics')) {
-        updateAnalytics();
-    }
-};
-
 const loadClientTable = () => {
     const tbody = document.getElementById('clientTableBody');
     const cardsContainer = document.getElementById('clientCardsContainer');
@@ -111,19 +87,6 @@ const loadClientTable = () => {
     }
 };
 
-const generateClientOptions = () => {
-    if (cachedClientOptions && cachedClientsLength === clients.length) {
-        return cachedClientOptions;
-    }
-    
-    cachedClientOptions = clients.map(c => {
-        const displayName = c.displayName || getDisplayNameFormat(c.name);
-        return `<option value="${c.id}">${displayName} (${c.matterNumber})</option>`;
-    }).join('');
-    cachedClientsLength = clients.length;
-    
-    return cachedClientOptions;
-};
 
 const loadClientSelect = () => {
     const select = document.getElementById('clientSelect');
@@ -145,56 +108,4 @@ const loadFileNoteClientSelect = () => {
     if (!select) return;
     select.innerHTML = '<option value="">-- Select a Client --</option>' +
         generateClientOptions();
-};
-
-const openModal = () => document.getElementById('addClientModal').style.display = 'block';
-const closeModal = () => {
-    document.getElementById('addClientModal').style.display = 'none';
-    document.getElementById('addClientForm').reset();
-};
-
-const addClient = (event) => {
-    event.preventDefault();
-
-    const name = convertNameFormat(document.getElementById('newClientName').value);
-    const newClient = {
-        id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
-        name: name,
-        displayName: getDisplayNameFormat(name),
-        address: document.getElementById('newClientAddress').value,
-        matterNumber: document.getElementById('newMatterNumber').value,
-        court: document.getElementById('newCourt').value,
-        matterType: document.getElementById('newMatterType').value,
-        charges: document.getElementById('newCharges').value,
-        legalAid: document.getElementById('newLegalAid').value === 'Yes',
-        nextCourt: document.getElementById('newNextCourt').value,
-        status: 'Active',
-        ccl: false,
-        mention: false,
-        final: false,
-        taskPriority: null,
-        lastStatusUpdate: null,
-        priorityNotes: '',
-        letterHistory: []
-    };
-
-    clients.push(newClient);
-    saveData();
-    updateUI();
-    closeModal();
-    alert('Client added successfully!');
-};
-
-const selectClientForLetter = (clientId) => {
-    document.querySelector('.tab:nth-child(2)')?.click();
-    document.getElementById('clientSelect').value = clientId;
-    loadClientInfo();
-};
-
-const selectClientForSubpoena = (clientId) => {
-    openSubpoenaSystem(clientId);
-};
-
-const toggleClientCard = (card) => {
-    card.classList.toggle('expanded');
 };

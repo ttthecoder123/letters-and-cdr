@@ -3,30 +3,7 @@ let currentClient = null;
 let currentCDRData = null;
 let courtCalendarData = [];
 let currentWeekNumber = null;
-
-const formatDateCache = new Map();
 let allocateCheckboxes = null;
-
-const formatDate = (dateString) => {
-    if (!dateString) return '';
-    
-    if (formatDateCache.has(dateString)) {
-        return formatDateCache.get(dateString);
-    }
-    
-    const formatted = new Date(dateString).toLocaleDateString('en-AU', {
-        day: 'numeric', month: 'long', year: 'numeric'
-    });
-    
-    formatDateCache.set(dateString, formatted);
-    
-    if (formatDateCache.size > 100) {
-        const firstKey = formatDateCache.keys().next().value;
-        formatDateCache.delete(firstKey);
-    }
-    
-    return formatted;
-};
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
