@@ -39,7 +39,8 @@
     <script src="js/6-file-note.js"></script>
     <script src="js/7-excel-functions.js"></script>
     <script src="js/8-letter-field-generators.js"></script>
-    
+    <script src="js/10-subpoena.js"></script>
+
     <!-- App Initialization -->
     <script src="js/9-app-init.js"></script>
 
@@ -1556,8 +1557,7 @@
             <button class="tab" onclick="switchTab('calendar', event)">Court Calendar</button>
             <button class="tab" onclick="switchTab('analytics', event)">Analytics</button>
             <button class="tab" onclick="switchTab('filenote', event)">File Note</button>
-            <button class="tab" onclick="openSubpoenaSystem()">Subpoena</button>
-            <button class="tab" onclick="openTaskPrioritySystem()">Task Priorities</button>
+            <button class="tab" onclick="switchTab('subpoena', event)">Subpoena</button>
         </div>
 
         <!-- Mobile Menu Overlay -->
@@ -1575,8 +1575,7 @@
                 <button class="mobile-menu-tab" onclick="switchTabMobile('calendar', event)">Court Calendar</button>
                 <button class="mobile-menu-tab" onclick="switchTabMobile('analytics', event)">Analytics</button>
                 <button class="mobile-menu-tab" onclick="switchTabMobile('filenote', event)">File Note</button>
-                <button class="mobile-menu-tab" onclick="openSubpoenaSystemMobile()">Subpoena</button>
-                <button class="mobile-menu-tab" onclick="openTaskPrioritySystemMobile()">Task Priorities</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('subpoena', event)">Subpoena</button>
             </div>
         </div>
 
@@ -2263,6 +2262,188 @@
 
         <div id="fileNoteOutput" class="output-box" style="display: none; margin-top: 20px;"></div>
         <div id="fileNoteZapierStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
+    </div>
+
+    <!-- Subpoena Tab -->
+    <div id="subpoena" class="tab-content">
+        <h2>Subpoena Generation System</h2>
+        <p>Generate formal subpoenas for NSW court proceedings</p>
+
+        <div id="clientInfo" class="client-info"></div>
+
+        <form id="subpoenaForm">
+            <!-- Recipient Details Section -->
+            <div class="form-section">
+                <h2 class="section-title">Recipient Details</h2>
+
+                <div class="form-group">
+                    <label for="organizationType">
+                        Organization Type
+                    </label>
+                    <select id="organizationType" onchange="SubpoenaModule.handleOrganizationChange()">
+                        <option value="">-- Manual Entry --</option>
+                        <option value="NSW Police">NSW Police Force</option>
+                    </select>
+                    <span class="helper-text">Select for pre-filled details or choose manual entry</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="recipientName">
+                        Name of Person/Organization <span class="required">*</span>
+                    </label>
+                    <input type="text" id="recipientName" placeholder="Enter full name or organization name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="recipientAddress">
+                        Full Address <span class="required">*</span>
+                    </label>
+                    <textarea id="recipientAddress" placeholder="Enter complete address including postcode" required></textarea>
+                </div>
+            </div>
+
+            <!-- Court Information Section -->
+            <div class="form-section">
+                <h2 class="section-title">Court Information</h2>
+
+                <div class="form-group">
+                    <label for="courtLevel">
+                        Court Level <span class="required">*</span>
+                    </label>
+                    <select id="courtLevel" required>
+                        <option value="">-- Select Court Level --</option>
+                        <option value="Local Court">Local Court</option>
+                        <option value="District Court">District Court</option>
+                        <option value="Supreme Court">Supreme Court</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="courtLocation">
+                        Court Location <span class="required">*</span>
+                    </label>
+                    <input type="text" id="courtLocation" list="courtLocations" placeholder="e.g., Campbelltown, Sydney Downing Centre" required>
+                    <datalist id="courtLocations"></datalist>
+                </div>
+
+                <div class="form-group">
+                    <label for="returnDate">
+                        Return Date <span class="required">*</span>
+                    </label>
+                    <input type="date" id="returnDate" required>
+                    <span class="helper-text">Date when they must appear in court</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="complianceDate">
+                        Compliance Date <span class="required">*</span>
+                    </label>
+                    <input type="date" id="complianceDate" required>
+                    <span class="helper-text">Date by when documents must be produced</span>
+                    <div id="dateWarning" class="date-warning"></div>
+                </div>
+            </div>
+
+            <!-- Case Details Section -->
+            <div class="form-section">
+                <h2 class="section-title">Case Details</h2>
+
+                <div class="form-group">
+                    <label for="partyType">
+                        Party Type <span class="required">*</span>
+                    </label>
+                    <select id="partyType" required>
+                        <option value="R v">R v (Criminal)</option>
+                        <option value="Police v">Police v (Summary)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="clientName">
+                        Client Name <span class="required">*</span>
+                    </label>
+                    <input type="text" id="clientName" placeholder="Enter client name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="proceedingsNumber">
+                        Proceedings Number <span class="required">*</span>
+                    </label>
+                    <input type="text" id="proceedingsNumber" placeholder="e.g., 2024/12345678" required>
+                    <span class="helper-text">Court file number or proceedings number</span>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        Issued on Behalf of <span class="required">*</span>
+                    </label>
+                    <div class="radio-group">
+                        <div class="radio-item">
+                            <input type="radio" id="defendant" name="issuedFor" value="Defendant" checked>
+                            <label for="defendant">Defendant</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="respondent" name="issuedFor" value="Respondent">
+                            <label for="respondent">Respondent</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents Sought Section -->
+            <div class="form-section">
+                <h2 class="section-title">Documents Sought</h2>
+
+                <div class="form-group">
+                    <label for="documentsSought">
+                        Description of Documents Required <span class="required">*</span>
+                    </label>
+                    <textarea id="documentsSought" rows="6" placeholder="Describe the documents sought in detail. Be specific about dates, types, and any relevant identifiers." required></textarea>
+                    <span class="helper-text">Describe the documents sought. This will be formalized in the final document.</span>
+                </div>
+            </div>
+
+            <!-- Contact Information Section -->
+            <div class="form-section">
+                <h2 class="section-title">Contact Information</h2>
+
+                <div class="form-group">
+                    <label for="solicitor">
+                        Solicitor Name <span class="required">*</span>
+                    </label>
+                    <select id="solicitor" required>
+                        <option value="">-- Select Solicitor --</option>
+                        <option value="AAG">AAG - Alexander Georgieff</option>
+                        <option value="RHH">RHH - Rylie Hahn-Hamilton</option>
+                        <option value="BJB">BJB - Benjamin Brown</option>
+                        <option value="SRS">SRS - Sophia Seton</option>
+                        <option value="NKM">NKM - Natalie McDonald</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Firm Details</label>
+                    <div style="padding: 12px; background: #f9fafb; border-radius: 6px;">
+                        <strong>Address:</strong> 49 Dumaresq Street, Campbelltown NSW 2560<br>
+                        <strong>Phone:</strong> 02 4626 5077
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" onclick="SubpoenaModule.generateSubpoenaPrompt()">Generate Subpoena</button>
+                <button type="button" class="btn btn-success" id="copyBtn" onclick="SubpoenaModule.copyToClipboard()" disabled>Copy to Clipboard</button>
+                <button type="button" class="btn btn-success" id="zapierBtn" onclick="SubpoenaModule.sendSubpoenaToZapier()" disabled>Send to Zapier</button>
+                <button type="button" class="btn btn-secondary" onclick="SubpoenaModule.clearForm()">Clear Form</button>
+            </div>
+        </form>
+
+        <!-- Output Display -->
+        <div id="subpoenaOutput" class="output-box"></div>
+
+        <!-- Status Messages -->
+        <div id="zapierStatus" class="status-message"></div>
     </div>
 
     <!-- Add Client Modal -->
