@@ -12,44 +12,6 @@ const updateNewClientData = (field, value) => {
     }
 };
 
-const convertNameFormat = (name) => {
-    if (!name || typeof name !== 'string') return name || '';
-
-    name = name.trim();
-
-    if (name.includes(',')) {
-        const parts = name.split(',');
-        if (parts.length >= 2) {
-            const surname = parts[0].trim();
-            const firstAndMiddle = parts[1].trim();
-
-            return `${firstAndMiddle} ${surname}`;
-        }
-    }
-
-    return name;
-};
-
-const getDisplayNameFormat = (name) => {
-    if (!name || typeof name !== 'string') return name || '';
-    
-    name = name.trim();
-    
-    if (name.includes(',')) {
-        return name;
-    }
-    
-    const parts = name.split(' ');
-    if (parts.length >= 2) {
-        const surname = parts[parts.length - 1];
-        const firstAndMiddle = parts.slice(0, -1).join(' ');
-        
-        return `${surname}, ${firstAndMiddle}`;
-    }
-    
-    return name;
-};
-
 const getTemplateFileName = (type) => ({
     'CCL': 'CCL_Template.docx',
     'Mention': 'Mention_Template.docx',
