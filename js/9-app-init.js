@@ -5,7 +5,6 @@ let courtCalendarData = [];
 let currentWeekNumber = null;
 let allocateCheckboxes = null;
 
-const getTodayDate = () => new Date().toISOString().split('T')[0];
 
 const updateNewClientData = (field, value) => {
     if (currentClient && currentClient.isNew) {
