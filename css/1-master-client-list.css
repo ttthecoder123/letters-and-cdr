@@ -1,0 +1,212 @@
+/* Master Client List Styles */
+/* Table and card views for client database */
+
+/* ===== TABLE STYLES ===== */
+.master-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.master-table th {
+    background: #f1f5f9;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.master-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.master-table tr:hover {
+    background: #f8fafc;
+}
+
+/* ===== CLIENT CARDS (Mobile) ===== */
+.client-card {
+    display: none;
+}
+
+.client-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.client-card-main {
+    flex: 1;
+}
+
+.client-card-name {
+    font-weight: 600;
+    font-size: 18px;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+
+.client-card-matter {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.client-card-status-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.client-card-expand {
+    font-size: 20px;
+    color: #64748b;
+    transition: transform 0.3s;
+}
+
+.client-card.expanded .client-card-expand {
+    transform: rotate(180deg);
+}
+
+.client-card-details {
+    display: none;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.client-card.expanded .client-card-details {
+    display: block;
+}
+
+.client-card-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 14px;
+}
+
+.client-card-label {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.client-card-value {
+    color: #1e293b;
+    text-align: right;
+}
+
+.client-card-charges {
+    padding: 8px;
+    background: #f8fafc;
+    border-radius: 4px;
+    margin: 10px 0;
+    font-size: 14px;
+    color: #475569;
+}
+
+.client-card-letters {
+    margin: 10px 0;
+}
+
+.client-card-letter-status {
+    display: flex;
+    gap: 15px;
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+.client-card-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.client-card-btn {
+    flex: 1;
+    padding: 12px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.client-card-btn:hover {
+    background: #2563eb;
+}
+
+/* ===== ADD CLIENT BUTTON ===== */
+.add-client-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    transition: all 0.2s;
+    z-index: 100;
+}
+
+.add-client-btn:hover {
+    background: #2563eb;
+    transform: scale(1.1);
+}
+
+/* ===== LETTER HISTORY ===== */
+.letter-history {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 20px;
+}
+
+.letter-history h4 {
+    margin: 0 0 12px 0;
+    color: #374151;
+}
+
+.letter-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.letter-item:last-child {
+    border-bottom: none;
+}
+
+/* ===== NEW CLIENT INPUTS ===== */
+.new-client-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.new-client-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+textarea.new-client-input {
+    resize: vertical;
+    min-height: 60px;
+}
