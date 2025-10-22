@@ -32,10 +32,15 @@ const TaskPriorityModule = (() => {
             }
         });
 
-        document.getElementById('statsTasksNow').textContent = stats.tasksNow;
-        document.getElementById('statsTasksPending').textContent = stats.tasksPending;
-        document.getElementById('statsAdminClose').textContent = stats.adminClose;
-        document.getElementById('statsUnassigned').textContent = stats.unassigned;
+        const statsTasksNow = document.getElementById('statsTasksNow');
+        const statsTasksPending = document.getElementById('statsTasksPending');
+        const statsAdminClose = document.getElementById('statsAdminClose');
+        const statsUnassigned = document.getElementById('statsUnassigned');
+        
+        if (statsTasksNow) statsTasksNow.textContent = stats.tasksNow;
+        if (statsTasksPending) statsTasksPending.textContent = stats.tasksPending;
+        if (statsAdminClose) statsAdminClose.textContent = stats.adminClose;
+        if (statsUnassigned) statsUnassigned.textContent = stats.unassigned;
     };
 
     const filterBy = (priority) => {
@@ -136,6 +141,7 @@ const TaskPriorityModule = (() => {
 
     const renderMatters = () => {
         const container = document.getElementById('mattersContainer');
+        if (!container) return;
         
         if (filteredClients.length === 0) {
             container.innerHTML = `
