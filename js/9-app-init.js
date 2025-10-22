@@ -55,6 +55,7 @@ const switchTab = (tabName, event) => {
     if (tabName === 'analytics') updateAnalytics();
     if (tabName === 'calendar') updateCourtCalendar();
     if (tabName === 'subpoena') SubpoenaModule.init();
+    if (tabName === 'taskpriority') TaskPriorityModule.init();
 };
 
 const openModal = () => document.getElementById('addClientModal').style.display = 'block';

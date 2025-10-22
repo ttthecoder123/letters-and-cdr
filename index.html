@@ -40,6 +40,7 @@
     <script src="js/7-excel-functions.js"></script>
     <script src="js/8-letter-field-generators.js"></script>
     <script src="js/10-subpoena.js"></script>
+    <script src="js/11-task-priority.js"></script>
 
     <!-- App Initialization -->
     <script src="js/9-app-init.js"></script>
@@ -1558,6 +1559,7 @@
             <button class="tab" onclick="switchTab('analytics', event)">Analytics</button>
             <button class="tab" onclick="switchTab('filenote', event)">File Note</button>
             <button class="tab" onclick="switchTab('subpoena', event)">Subpoena</button>
+            <button class="tab" onclick="switchTab('taskpriority', event)">Task Priority</button>
         </div>
 
         <!-- Mobile Menu Overlay -->
@@ -1576,6 +1578,7 @@
                 <button class="mobile-menu-tab" onclick="switchTabMobile('analytics', event)">Analytics</button>
                 <button class="mobile-menu-tab" onclick="switchTabMobile('filenote', event)">File Note</button>
                 <button class="mobile-menu-tab" onclick="switchTabMobile('subpoena', event)">Subpoena</button>
+                <button class="mobile-menu-tab" onclick="switchTabMobile('taskpriority', event)">Task Priority</button>
             </div>
         </div>
 
@@ -2444,6 +2447,110 @@
 
         <!-- Status Messages -->
         <div id="zapierStatus" class="status-message"></div>
+    </div>
+
+    <!-- Task Priority Tab -->
+    <div id="taskpriority" class="tab-content">
+        <h2>Task Priority Management</h2>
+        <p>Track and manage matter priorities</p>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-number priority-tasks-now" id="statsTasksNow">0</div>
+                <div class="stat-label">Tasks Now</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number priority-tasks-pending" id="statsTasksPending">0</div>
+                <div class="stat-label">Tasks Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number priority-admin-close" id="statsAdminClose">0</div>
+                <div class="stat-label">Admin/Close</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number priority-unassigned" id="statsUnassigned">0</div>
+                <div class="stat-label">Unassigned</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="controls-top">
+                <div class="filter-group">
+                    <button class="filter-btn show-all active" onclick="TaskPriorityModule.filterBy('all')">Show All</button>
+                    <button class="filter-btn tasks-now" onclick="TaskPriorityModule.filterBy('Tasks Now')">Tasks Now</button>
+                    <button class="filter-btn tasks-pending" onclick="TaskPriorityModule.filterBy('Tasks Pending')">Tasks Pending</button>
+                    <button class="filter-btn admin-close" onclick="TaskPriorityModule.filterBy('Admin/Close')">Admin/Close</button>
+                    <button class="filter-btn unassigned" onclick="TaskPriorityModule.filterBy(null)">Unassigned</button>
+                </div>
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="Search clients or matter numbers..." 
+                           onkeyup="TaskPriorityModule.searchMatters(this.value)">
+                </div>
+            </div>
+            <div class="sort-controls">
+                <label for="sortSelect">Sort by:</label>
+                <select class="sort-select" id="sortSelect" onchange="TaskPriorityModule.sortMatters()">
+                    <option value="priority">Priority</option>
+                    <option value="name">Client Name</option>
+                    <option value="updated">Last Updated</option>
+                    <option value="matter">Matter Number</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Priority Grid -->
+        <div class="priority-grid">
+            <div class="grid-header">
+                <div>Client & Matter</div>
+                <div>Priority</div>
+                <div>Last Updated</div>
+                <div>Actions</div>
+                <div></div>
+            </div>
+            <div id="mattersContainer">
+                <!-- Matters will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div class="modal" id="editModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalClientName">Client Name</h3>
+                    <p id="modalMatterNumber">Matter: ABC123</p>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Priority Status</label>
+                        <select class="form-select" id="modalPriority">
+                            <option value="">Unassigned</option>
+                            <option value="Tasks Now">Tasks Now</option>
+                            <option value="Tasks Pending">Tasks Pending</option>
+                            <option value="Admin/Close">Admin/Close</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Priority Notes</label>
+                        <textarea class="form-textarea" id="modalNotes" 
+                                  placeholder="Add notes about this matter's priority status..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <small class="text-muted">Last updated: <span id="modalLastUpdated">Never</span></small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" onclick="TaskPriorityModule.closeModal()">Cancel</button>
+                    <button class="btn-save" onclick="TaskPriorityModule.savePriority()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Message -->
+        <div class="success-message" id="successMessage">
+            Priority updated successfully!
+        </div>
     </div>
 
     <!-- Add Client Modal -->
