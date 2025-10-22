@@ -1,34 +1,6 @@
 
 
 /**
- * Send data to Zapier webhook
- * @param {Object} payload - Data to send
- * @returns {Promise<boolean>} True if successful
- */
-const sendToZapier = async (payload) => {
-    try {
-        const formData = new FormData();
-        formData.append('data', JSON.stringify(payload));
-
-        const response = await fetch(CONFIG.zapier.webhookUrl, {
-            method: 'POST',
-            body: formData
-        });
-
-        if (response.ok) {
-            console.log('Successfully sent to Zapier:', payload.type);
-            return true;
-        } else {
-            console.error('Failed to send to Zapier:', response.status);
-            return false;
-        }
-    } catch (error) {
-        console.error('Zapier error:', error);
-        return false;
-    }
-};
-
-/**
  * Format letter payload for Zapier
  * @param {string} letterType - Type of letter (CCL, Mention, Final, etc.)
  * @param {Object} clientData - Client information
