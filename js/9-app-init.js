@@ -12,12 +12,6 @@ const updateNewClientData = (field, value) => {
     }
 };
 
-const getTemplateFileName = (type) => ({
-    'CCL': 'CCL_Template.docx',
-    'Mention': 'Mention_Template.docx',
-    'Final': 'Final_Template.docx',
-    'FeeReestimate': 'FeeReestimate_Template.docx'
-}[type] || 'Template.docx');
 
 const updateDatabaseStatus = (connected) => {
     const status = document.getElementById('databaseStatus');
