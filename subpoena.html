@@ -9,13 +9,34 @@
         // ===== GLOBAL STATE =====
         let currentClientData = null;
         let currentSubpoenaData = null;
+        
+        // ===== CACHING =====
+        const formatDateCache = new Map();
+        const validationCache = new Map();
 
         // ===== UTILITIES =====
         const formatDate = (dateString) => {
             if (!dateString) return '';
-            return new Date(dateString).toLocaleDateString('en-AU', {
+            
+            // Check cache first
+            if (formatDateCache.has(dateString)) {
+                return formatDateCache.get(dateString);
+            }
+            
+            const formatted = new Date(dateString).toLocaleDateString('en-AU', {
                 day: 'numeric', month: 'long', year: 'numeric'
             });
+            
+            // Cache the result
+            formatDateCache.set(dateString, formatted);
+            
+            // Limit cache size
+            if (formatDateCache.size > 50) {
+                const firstKey = formatDateCache.keys().next().value;
+                formatDateCache.delete(firstKey);
+            }
+            
+            return formatted;
         };
 
         const formatDateForSubpoena = (dateString) => {
@@ -98,6 +119,17 @@
                 warningDiv.style.display = 'none';
                 return true;
             }
+            
+            // Check cache first
+            const cacheKey = `${returnDate}_${complianceDate}_${new Date().toDateString()}`;
+            if (validationCache.has(cacheKey)) {
+                const cachedResult = validationCache.get(cacheKey);
+                warningDiv.style.display = cachedResult.warnings.length > 0 ? 'block' : 'none';
+                if (cachedResult.warnings.length > 0) {
+                    warningDiv.innerHTML = cachedResult.warnings.join('<br>');
+                }
+                return cachedResult.isValid;
+            }
 
             const today = new Date();
             const returnDateObj = new Date(returnDate);
@@ -125,10 +157,21 @@
                 warnings.push(`Warning: Only ${daysNotice} days notice given (minimum 7 days recommended)`);
             }
 
+            const isValid = warnings.length === 0 || (warnings.length === 1 && warnings[0].includes('Warning:'));
+            
+            // Cache the result
+            validationCache.set(cacheKey, { warnings, isValid });
+            
+            // Limit cache size
+            if (validationCache.size > 50) {
+                const firstKey = validationCache.keys().next().value;
+                validationCache.delete(firstKey);
+            }
+
             if (warnings.length > 0) {
                 warningDiv.style.display = 'block';
                 warningDiv.innerHTML = warnings.join('<br>');
-                return warnings.length === 1 && warnings[0].includes('Warning:');
+                return isValid;
             }
 
             warningDiv.style.display = 'none';
