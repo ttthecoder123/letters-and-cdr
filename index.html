@@ -14,12 +14,35 @@
         let courtCalendarData = [];
         let currentWeekNumber = null;
 
+        // ===== CACHING =====
+        let cachedClientOptions = null;
+        let cachedClientsLength = 0;
+        const formatDateCache = new Map();
+        let allocateCheckboxes = null;
+
         // ===== UTILITIES =====
         const formatDate = (dateString) => {
             if (!dateString) return '';
-            return new Date(dateString).toLocaleDateString('en-AU', {
+            
+            // Check cache first
+            if (formatDateCache.has(dateString)) {
+                return formatDateCache.get(dateString);
+            }
+            
+            const formatted = new Date(dateString).toLocaleDateString('en-AU', {
                 day: 'numeric', month: 'long', year: 'numeric'
             });
+            
+            // Cache the result
+            formatDateCache.set(dateString, formatted);
+            
+            // Limit cache size to prevent memory leak
+            if (formatDateCache.size > 100) {
+                const firstKey = formatDateCache.keys().next().value;
+                formatDateCache.delete(firstKey);
+            }
+            
+            return formatted;
         };
 
         const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -93,6 +116,9 @@
             try {
                 if (typeof(Storage) !== "undefined") {
                     localStorage.setItem('legalClients', JSON.stringify(clients));
+                    // Invalidate caches when data changes
+                    cachedClientOptions = null;
+                    formatDateCache.clear();
                 }
             } catch(e) {
                 console.log('Storage not available');
@@ -124,12 +150,18 @@
             }
         };
 
-        const updateUI = () => {
-            loadClientTable();
-            loadClientSelect();
-            loadCDRClientSelect();
-            loadFileNoteClientSelect();
-            updateAnalytics();
+        const updateUI = (components = ['all']) => {
+            if (components.includes('all') || components.includes('table')) {
+                loadClientTable();
+            }
+            if (components.includes('all') || components.includes('selects')) {
+                loadClientSelect();
+                loadCDRClientSelect();
+                loadFileNoteClientSelect();
+            }
+            if (components.includes('all') || components.includes('analytics')) {
+                updateAnalytics();
+            }
         };
 
         const loadClientTable = () => {
@@ -222,29 +254,85 @@
             }
         };
 
+        const generateClientOptions = () => {
+            // Only regenerate if clients array changed
+            if (cachedClientOptions && cachedClientsLength === clients.length) {
+                return cachedClientOptions;
+            }
+            
+            cachedClientOptions = clients.map(c => {
+                // Use cached displayName if available, otherwise calculate
+                const displayName = c.displayName || getDisplayNameFormat(c.name);
+                return `<option value="${c.id}">${displayName} (${c.matterNumber})</option>`;
+            }).join('');
+            cachedClientsLength = clients.length;
+            
+            return cachedClientOptions;
+        };
+
         const loadClientSelect = () => {
             const select = document.getElementById('clientSelect');
             if (!select) return;
             select.innerHTML = '<option value="">-- Select a Client --</option>' +
                 '<option value="new">-- New Client (Not in Database) --</option>' +
-                clients.map(c => `<option value="${c.id}">${getDisplayNameFormat(c.name)} (${c.matterNumber})</option>`).join('');
+                generateClientOptions();
         };
 
         const loadCDRClientSelect = () => {
             const select = document.getElementById('cdrClientSelect');
             if (!select) return;
             select.innerHTML = '<option value="">-- Manual Entry --</option>' +
-                clients.map(c => `<option value="${c.id}">${getDisplayNameFormat(c.name)} (${c.matterNumber})</option>`).join('');
+                generateClientOptions();
         };
 
         const loadFileNoteClientSelect = () => {
             const select = document.getElementById('fileNoteClientSelect');
             if (!select) return;
             select.innerHTML = '<option value="">-- Select a Client --</option>' +
-                clients.map(c => `<option value="${c.id}">${getDisplayNameFormat(c.name)} (${c.matterNumber})</option>`).join('');
+                generateClientOptions();
         };
 
         const updateAnalytics = () => {
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            const now = new Date();
+            
+            // Single pass through clients array to calculate all statistics
+            const stats = clients.reduce((acc, client) => {
+                // Count active matters
+                if (client.status === 'Active') acc.activeMatters++;
+                
+                // Count pending letters
+                if (!client.ccl) acc.pendingLetters++;
+                
+                // Count upcoming court dates
+                if (client.nextCourt) {
+                    const courtDate = new Date(client.nextCourt);
+                    if (courtDate <= nextWeek && courtDate >= now) {
+                        acc.upcomingCourt++;
+                    }
+                }
+                
+                // Court breakdown
+                if (client.court) {
+                    acc.courtBreakdown[client.court] = (acc.courtBreakdown[client.court] || 0) + 1;
+                }
+                
+                // Letter status
+                if (client.ccl) acc.letterStats.ccl++;
+                if (client.mention) acc.letterStats.mention++;
+                if (client.final) acc.letterStats.final++;
+                
+                return acc;
+            }, {
+                activeMatters: 0,
+                pendingLetters: 0,
+                upcomingCourt: 0,
+                courtBreakdown: {},
+                letterStats: { ccl: 0, mention: 0, final: 0 }
+            });
+            
+            // Update DOM elements
             const els = {
                 totalMatters: document.getElementById('totalMatters'),
                 activeMatters: document.getElementById('activeMatters'),
@@ -253,25 +341,14 @@
             };
 
             if (els.totalMatters) els.totalMatters.textContent = clients.length;
-            if (els.activeMatters) els.activeMatters.textContent = clients.filter(c => c.status === 'Active').length;
-            if (els.pendingLetters) els.pendingLetters.textContent = clients.filter(c => !c.ccl).length;
-
-            const nextWeek = new Date();
-            nextWeek.setDate(nextWeek.getDate() + 7);
-            const upcoming = clients.filter(c => {
-                if (!c.nextCourt) return false;
-                const courtDate = new Date(c.nextCourt);
-                return courtDate <= nextWeek && courtDate >= new Date();
-            }).length;
-            if (els.upcomingCourt) els.upcomingCourt.textContent = upcoming;
+            if (els.activeMatters) els.activeMatters.textContent = stats.activeMatters;
+            if (els.pendingLetters) els.pendingLetters.textContent = stats.pendingLetters;
+            if (els.upcomingCourt) els.upcomingCourt.textContent = stats.upcomingCourt;
 
             // Court breakdown
-            const courtBreakdown = {};
-            clients.forEach(c => courtBreakdown[c.court] = (courtBreakdown[c.court] || 0) + 1);
-
             const courtDiv = document.getElementById('courtBreakdown');
             if (courtDiv) {
-                courtDiv.innerHTML = Object.entries(courtBreakdown)
+                courtDiv.innerHTML = Object.entries(stats.courtBreakdown)
                     .sort((a, b) => b[1] - a[1])
                     .map(([court, count]) => `
                         <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
@@ -283,24 +360,18 @@
             // Letter status
             const statusDiv = document.getElementById('letterStatusChart');
             if (statusDiv) {
-                const stats = {
-                    ccl: clients.filter(c => c.ccl).length,
-                    mention: clients.filter(c => c.mention).length,
-                    final: clients.filter(c => c.final).length
-                };
-
                 statusDiv.innerHTML = `
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
                         <div style="text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #3b82f6;">${stats.ccl}</div>
+                            <div style="font-size: 2em; font-weight: bold; color: #3b82f6;">${stats.letterStats.ccl}</div>
                             <div>CCL Sent</div>
                         </div>
                         <div style="text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #16a34a;">${stats.mention}</div>
+                            <div style="font-size: 2em; font-weight: bold; color: #16a34a;">${stats.letterStats.mention}</div>
                             <div>Mention Letters</div>
                         </div>
                         <div style="text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #dc2626;">${stats.final}</div>
+                            <div style="font-size: 2em; font-weight: bold; color: #dc2626;">${stats.letterStats.final}</div>
                             <div>Final Letters</div>
                         </div>
                     </div>`;
@@ -331,9 +402,11 @@
         const addClient = (event) => {
             event.preventDefault();
 
+            const name = convertNameFormat(document.getElementById('newClientName').value);
             const newClient = {
                 id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
-                name: convertNameFormat(document.getElementById('newClientName').value),
+                name: name,
+                displayName: getDisplayNameFormat(name), // Cache display name
                 address: document.getElementById('newClientAddress').value,
                 matterNumber: document.getElementById('newMatterNumber').value,
                 court: document.getElementById('newCourt').value,
@@ -431,9 +504,13 @@
 
         const getAllocatedTo = () => {
             const allocated = [];
+            // Cache checkbox query if not already cached
+            if (!allocateCheckboxes) {
+                allocateCheckboxes = document.querySelectorAll('input[id^="allocate_"]');
+            }
             // Only get the CC solicitors from checkboxes (not admin)
-            document.querySelectorAll('input[id^="allocate_"]:checked').forEach(cb => {
-                allocated.push(cb.value);
+            allocateCheckboxes.forEach(cb => {
+                if (cb.checked) allocated.push(cb.value);
             });
             return allocated.join(', ') || 'TBD';
         };
@@ -441,7 +518,8 @@
         const getLetterAllocatedTo = () => {
             const allocated = [];
             // Only get the CC solicitors from checkboxes (not admin)
-            document.querySelectorAll('input[id^="letter_allocate_"]:checked').forEach(cb => {
+            const checkboxes = document.querySelectorAll('input[id^="letter_allocate_"]:checked');
+            checkboxes.forEach(cb => {
                 allocated.push(cb.value);
             });
             return allocated.join(', ') || 'TBD';
@@ -994,26 +1072,30 @@ FEE REMINDER: ${data.feeReminder || 'N/A'}${data.additionalDates ? '\n\nADDITION
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-                    clients = jsonData.map((row, index) => ({
-                        id: index + 1,
-                        name: convertNameFormat(row['Client Name'] || ''),
-                        address: row['Address'] || '',
-                        matterNumber: row['Matter Reference'] || '',
-                        court: row['Court'] || '',
-                        matterType: row['Matter Type'] || '',
-                        charges: row['Charges'] || '',
-                        legalAid: row['Legal Aid'] === 'Yes',
-                        contribution: row['Contribution'] || '',
-                        status: row['Status'] || 'Active',
-                        ccl: row['CCL Sent'] === 'Yes' || false,
-                        mention: row['Mention Sent'] === 'Yes' || false,
-                        final: row['Final Sent'] === 'Yes' || false,
-                        nextCourt: row['Next Court Date'] || '',
-                        taskPriority: row['Task Priority'] || null,
-                        lastStatusUpdate: row['Last Status Update'] || null,
-                        priorityNotes: row['Priority Notes'] || '',
-                        letterHistory: []
-                    }));
+                    clients = jsonData.map((row, index) => {
+                        const name = convertNameFormat(row['Client Name'] || '');
+                        return {
+                            id: index + 1,
+                            name: name,
+                            displayName: getDisplayNameFormat(name), // Cache display name
+                            address: row['Address'] || '',
+                            matterNumber: row['Matter Reference'] || '',
+                            court: row['Court'] || '',
+                            matterType: row['Matter Type'] || '',
+                            charges: row['Charges'] || '',
+                            legalAid: row['Legal Aid'] === 'Yes',
+                            contribution: row['Contribution'] || '',
+                            status: row['Status'] || 'Active',
+                            ccl: row['CCL Sent'] === 'Yes' || false,
+                            mention: row['Mention Sent'] === 'Yes' || false,
+                            final: row['Final Sent'] === 'Yes' || false,
+                            nextCourt: row['Next Court Date'] || '',
+                            taskPriority: row['Task Priority'] || null,
+                            lastStatusUpdate: row['Last Status Update'] || null,
+                            priorityNotes: row['Priority Notes'] || '',
+                            letterHistory: []
+                        };
+                    });
 
                     // Try to load CourtCalendar sheet if it exists
                     if (workbook.SheetNames.includes('CourtCalendar')) {
