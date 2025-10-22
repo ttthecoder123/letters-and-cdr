@@ -1,12 +1,9 @@
 
-let clients = [];
 let currentClient = null;
 let currentCDRData = null;
 let courtCalendarData = [];
 let currentWeekNumber = null;
 
-let cachedClientOptions = null;
-let cachedClientsLength = 0;
 const formatDateCache = new Map();
 let allocateCheckboxes = null;
 
@@ -84,32 +81,6 @@ const getTemplateFileName = (type) => ({
     'FeeReestimate': 'FeeReestimate_Template.docx'
 }[type] || 'Template.docx');
 
-const saveData = () => {
-    try {
-        if (typeof(Storage) !== "undefined") {
-            localStorage.setItem('legalClients', JSON.stringify(clients));
-            cachedClientOptions = null;
-            formatDateCache.clear();
-        }
-    } catch(e) {
-        console.log('Storage not available');
-    }
-};
-
-const loadSavedData = () => {
-    try {
-        if (typeof(Storage) !== "undefined") {
-            const saved = localStorage.getItem('legalClients');
-            if (saved) {
-                clients = JSON.parse(saved);
-                updateDatabaseStatus(true);
-            }
-        }
-    } catch(e) {
-        console.log('Storage not available');
-    }
-};
-
 const updateDatabaseStatus = (connected) => {
     const status = document.getElementById('databaseStatus');
     if (status) {
@@ -135,17 +106,10 @@ const updateUI = (components = ['all']) => {
 };
 
 const generateClientOptions = () => {
-    if (cachedClientOptions && cachedClientsLength === clients.length) {
-        return cachedClientOptions;
-    }
-    
-    cachedClientOptions = clients.map(c => {
+    return clients.map(c => {
         const displayName = c.displayName || getDisplayNameFormat(c.name);
         return `<option value="${c.id}">${displayName} (${c.matterNumber})</option>`;
     }).join('');
-    cachedClientsLength = clients.length;
-    
-    return cachedClientOptions;
 };
 
 const switchTab = (tabName, event) => {
@@ -167,14 +131,14 @@ const closeModal = () => {
     document.getElementById('addClientForm').reset();
 };
 
-const addClient = (event) => {
+const addClientFromForm = (event) => {
     event.preventDefault();
 
     const name = convertNameFormat(document.getElementById('newClientName').value);
     const newClient = {
         id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
         name: name,
-        displayName: getDisplayNameFormat(name), // Cache display name
+        displayName: getDisplayNameFormat(name),
         address: document.getElementById('newClientAddress').value,
         matterNumber: document.getElementById('newMatterNumber').value,
         court: document.getElementById('newCourt').value,
@@ -286,7 +250,8 @@ const toggleClientCard = (cardElement) => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadSavedData();
+    const loaded = loadSavedData();
+    updateDatabaseStatus(loaded);
     updateUI();
     initializeCheckboxHandlers();
 });
